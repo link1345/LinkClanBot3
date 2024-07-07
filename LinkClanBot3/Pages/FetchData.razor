@@ -1,0 +1,50 @@
+﻿@page "/fetchdata"
+@using LinkClanBot3.Data
+@inject WeatherForecastService ForecastService
+@inject LinkClanBot3Context DBContext
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from a service.</p>
+
+@if (members == null)
+{
+	<p><em>Loading...</em></p>
+}
+else
+{
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Temp. (C)</th>
+				<th>Temp. (F)</th>
+				<th>Summary</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var member in members)
+			{
+				<tr>
+					<td>@member.DiscordID</td>
+					<td>@member.DiscordDisplayName</td>
+					<td>@member.DiscordName</td>
+					<td>@member.CallName</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	//private WeatherForecast[]? forecasts;
+
+	private List<Member> members;
+
+	protected override async Task OnInitializedAsync()
+	{
+		members = DBContext.Member.Where(e=> true).ToList();
+	}
+}

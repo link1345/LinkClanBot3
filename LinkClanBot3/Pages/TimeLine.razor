@@ -1,0 +1,56 @@
+﻿@page "/TimeLine"
+@using LinkClanBot3.Data
+@inject WeatherForecastService ForecastService
+@inject LinkClanBot3Context DBContext
+
+@using Microsoft.EntityFrameworkCore
+@using System.Linq
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Weather forecast</h1>
+
+<p>This component demonstrates fetching data from a service.</p>
+
+@if (TimeLines == null)
+{
+	<p><em>Loading...</em></p>
+}
+else
+{
+	<table class="table">
+		<thead>
+			<tr>
+				<th>UserName</th>
+				<th>AffterChannel</th>
+				<th>BeforChannel</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in TimeLines)
+			{
+				<tr>
+					<td>@item.EventDate.ToShortDateString()</td>
+					<td>@item.MemberData.DiscordDisplayName</td>
+					<td>@item.before_channel_name</td>
+					<td>@item.after_channel_name</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	//private WeatherForecast[]? forecasts;
+
+	private List<MemberTimeLine>? TimeLines;
+
+	protected override async Task OnInitializedAsync()
+	{
+		TimeLines = DBContext.MemberTimeLine.Where(e => true).Include(e=>e.MemberData).ToList();
+
+		
+
+	}
+}
