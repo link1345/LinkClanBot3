@@ -21,20 +21,22 @@ else
 	<table class="table">
 		<thead>
 			<tr>
+				<th>Date</th>
 				<th>UserName</th>
-				<th>AffterChannel</th>
 				<th>BeforChannel</th>
-				<th></th>
+				<th>AffterChannel</th>
+				<th>Mode</th>
 			</tr>
 		</thead>
 		<tbody>
 			@foreach (var item in TimeLines)
 			{
 				<tr>
-					<td>@item.EventDate.ToShortDateString()</td>
+					<td>@item.EventDate.ToShortDateString() @item.EventDate.ToLongTimeString()</td>
 					<td>@item.MemberData.DiscordDisplayName</td>
 					<td>@item.before_channel_name</td>
 					<td>@item.after_channel_name</td>
+					<td>@item.EnteringRoom</td>
 				</tr>
 			}
 		</tbody>
@@ -48,7 +50,7 @@ else
 
 	protected override async Task OnInitializedAsync()
 	{
-		TimeLines = DBContext.MemberTimeLine.Where(e => true).Include(e=>e.MemberData).ToList();
+		TimeLines = DBContext.MemberTimeLine.Where(e => true).OrderByDescending(e=>e.EventDate).Take(5).Include(e => e.MemberData).ToList();
 
 		
 

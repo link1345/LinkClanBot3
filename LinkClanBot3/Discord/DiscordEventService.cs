@@ -1,14 +1,15 @@
 ﻿using Discord.WebSocket;
 using Discord;
 using LinkClanBot3.Data;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions;
+using NuGet.Protocol;
 
 namespace LinkClanBot3.Discord
 {
 	public class SettingVoiceChannel
 	{
-		public List<string> LoginRole { get; set; }
-		public List<string> AdminRole { get; set; }
+		public List<string> LoginRole { get; set; } = [];
+		public List<string> AdminRole { get; set; } = [];
 	}
 
 
@@ -16,7 +17,7 @@ namespace LinkClanBot3.Discord
 	{
 		private readonly IServiceScopeFactory _scopeFactory;
 
-		private ILogger<DiscordEventService> testLogger;
+		private ILogger<DiscordEventService> logger { get; set; }
 		private DiscordSocketClient _client { set; get; }
 		private IConfigurationRoot _configuration { set; get; }
 
@@ -31,15 +32,17 @@ namespace LinkClanBot3.Discord
 					 options => options.IncludeScopes = true   // Enable Scope
 				);
 			});
-			testLogger = loggerFactory.CreateLogger<DiscordEventService>();
-		}
+			logger = loggerFactory.CreateLogger<DiscordEventService>();
 
-		private void InitConfig()
-		{
+
 			_configuration = new ConfigurationBuilder()
 			   .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
 			   .AddUserSecrets<Program>()
 			   .Build();
+
+
+			var _config = new DiscordSocketConfig { MessageCacheSize = 100 };
+			_client = new DiscordSocketClient(_config);
 		}
 
 		private T? getConfig<T>(string name)
@@ -47,30 +50,38 @@ namespace LinkClanBot3.Discord
 			return _configuration.GetSection(name).Get<T>();
 		}
 
+		public override void Dispose()
+		{
+			_client.Dispose();
+		}
+
 
 		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
-			InitConfig();
-
-			var _config = new DiscordSocketConfig { MessageCacheSize = 100 };
-			_client = new DiscordSocketClient(_config);
-
+			logger.LogInformation("DicordEventService Start");
 			var token = getConfig<string>("DiscordToken");
 			await _client.LoginAsync(TokenType.Bot, token);
 			await _client.StartAsync();
 
 			_client.MessageUpdated += MessageUpdated;
-			_client.UserVoiceStateUpdated += UserVoiceStateUpdated; ;
+			_client.UserVoiceStateUpdated += UserVoiceStateUpdated;
+			
+			_client.Connected += () =>
+			{
+				logger.LogInformation("DicordEventService Connected");
+
+				return Task.CompletedTask;
+			};
 			_client.Ready += () =>
 			{
 				var test = _client.GetChannel(626015039681200130);
 				if (test is SocketTextChannel channel)
 				{
-					channel.SendMessageAsync("Bot is connected!");
+					channel.SendMessageAsync("Bot is Ready!");
 				}
 				else
 				{
-					Console.WriteLine("Bot is connected!");
+					Console.WriteLine("Bot is Ready!");
 				}
 				return Task.CompletedTask;
 			};
@@ -126,14 +137,15 @@ namespace LinkClanBot3.Discord
 
 					_dbContext.SaveChanges();
 				}
-				
-				// 退出
+
+				// 入室
 				if (arg2.VoiceChannel == null)
 				{
+					Console.WriteLine($"入室 , {user.DiscordDisplayName}");
 					_dbContext.MemberTimeLine.Add(new MemberTimeLine
-                    {
-                        MemberData = user,
-                        EnteringRoom = EnteringRoom.Move,
+					{
+						MemberData = user,
+						EnteringRoom = EnteringRoom.Entry,
 						before_channel_id = null,
 						before_channel_name = null,
 						after_channel_id = arg3.VoiceChannel?.Id.ToString() ?? "",
@@ -141,13 +153,14 @@ namespace LinkClanBot3.Discord
 						EventDate = DateTime.Now
 					});
 				}
-				// 入室
+				// 退出
 				else if (arg3.VoiceChannel == null)
 				{
+					Console.WriteLine($"退出 , {user.DiscordDisplayName}");
 					_dbContext.MemberTimeLine.Add(new MemberTimeLine
-                    {
-                        MemberData = user,
-                        EnteringRoom = EnteringRoom.Move,
+					{
+						MemberData = user,
+						EnteringRoom = EnteringRoom.Exit,
 						before_channel_id = arg2.VoiceChannel?.Id.ToString() ?? "",
 						before_channel_name = arg2.VoiceChannel?.Name ?? "",
 						after_channel_id = null,
@@ -158,6 +171,7 @@ namespace LinkClanBot3.Discord
 				// 移動
 				else
 				{
+					Console.WriteLine($"移動 , {user.DiscordDisplayName}");
 					_dbContext.MemberTimeLine.Add(new MemberTimeLine
 					{
 						MemberData = user,

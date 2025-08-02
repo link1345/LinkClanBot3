@@ -1,12 +1,10 @@
 using LinkClanBot3.Data;
 using LinkClanBot3.Discord;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
-var connectionString = builder.Configuration.GetConnectionString("LinkClanBot3ContextConnection") ?? throw new InvalidOperationException("Connection string 'LinkClanBot3ContextConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") ?? throw new InvalidOperationException("Connection string 'LinkClanBot3ContextConnection' not found.");
 
 builder.Services.AddDbContext<LinkClanBot3Context>(options => options.UseSqlite(connectionString));
 
