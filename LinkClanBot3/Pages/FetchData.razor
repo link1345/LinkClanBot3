@@ -18,20 +18,28 @@ else
 	<table class="table">
 		<thead>
 			<tr>
-				<th>Date</th>
-				<th>Temp. (C)</th>
-				<th>Temp. (F)</th>
-				<th>Summary</th>
+				<th>DiscordName</th>
+				<th>CallName</th>
+				<th>SNS X</th>
+				<th>Role</th>
+				<th>今月(hours)</th>
+				<th>1か月前</th>
+				<th>2か月前</th>
+				<th>3か月前</th>
 			</tr>
 		</thead>
 		<tbody>
 			@foreach (var member in members)
 			{
 				<tr>
-					<td>@member.DiscordID</td>
-					<td>@member.DiscordDisplayName</td>
 					<td>@member.DiscordName</td>
 					<td>@member.CallName</td>
+					<td>@member.SNS_X_UserID</td>
+					<td>@member.Role</td>
+					<td>@getJoinTime(0, member.MemberID)</td>
+					<td>@getJoinTime(1, member.MemberID)</td>
+					<td>@getJoinTime(2, member.MemberID)</td>
+					<td>@getJoinTime(3, member.MemberID)</td>
 				</tr>
 			}
 		</tbody>
@@ -39,12 +47,51 @@ else
 }
 
 @code {
-	//private WeatherForecast[]? forecasts;
-
 	private List<Member> members;
+
+	private double getJoinTime(int monthsAgo, string memberId)
+	{
+		DateTime dtToday = DateTime.Today.AddMonths(monthsAgo);
+		var from = new DateTime(dtToday.Year, dtToday.Month, 1);
+		var to = new DateTime(dtToday.Year, dtToday.Month,
+			DateTime.DaysInMonth(dtToday.Year, dtToday.Month), 12, 59, 59);
+
+		var timeLines = DBContext.MemberTimeLine
+			.Where(e => from <= e.EventDate && to >= e.EventDate && e.MemberID == memberId)
+			.Take(10000)
+			.OrderBy(e => e.MemberData)
+			.ToList();
+
+		double sum = 0.0;
+		var startIndex = 0;
+		foreach (var line in timeLines.Select((value, index) => new { index, value }))
+		{
+			if(line.value.EnteringRoom == EnteringRoom.Exit)
+			{
+				var endItem = timeLines.TakeLast(timeLines.Count - startIndex).Take(line.index).FirstOrDefault(e=>e.EnteringRoom == EnteringRoom.Entry);
+				if (monthsAgo != 0 && endItem == null)
+				{
+					// 退出がなくて、月終わりの場合は、…月末時間で計算する
+					sum += (line.value.EventDate - to).TotalHours;
+				}
+				else if (monthsAgo == 0 && endItem == null)
+				{
+					// 退出がなくて、今月まだ終わっていなければ、現在進行形で、Voiceチャンネルに入っているので、計算する
+					sum += (line.value.EventDate - DateTime.UtcNow).TotalHours;
+				}
+				else if(endItem != null)
+				{
+					// 退出があれば、退出時間と入室時間の差分を計算する
+					sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+					startIndex = line.index;
+				}
+			}
+		}
+		return Math.Round(sum, 2);
+	}
 
 	protected override async Task OnInitializedAsync()
 	{
-		members = DBContext.Member.Where(e=> true).ToList();
+		members = DBContext.Member.Where(e => e.Role != MemberRole.Withdrawal).OrderBy(e => (int)e.Role).ToList();
 	}
 }

@@ -6,6 +6,8 @@ using LinkClanBot3.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions;
 using NuGet.Protocol;
+using System.Data;
+using System.Threading.Tasks;
 
 namespace LinkClanBot3.Discord
 {
@@ -47,8 +49,8 @@ namespace LinkClanBot3.Discord
 			var _config = new DiscordSocketConfig { 
 				MessageCacheSize = 100,
 			};
-			_config.GatewayIntents = GatewayIntents.Guilds;
-            Client = new DiscordSocketClient(_config);
+			_config.GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates;
+			Client = new DiscordSocketClient(_config);
 		}
 
 		private T? getConfig<T>(string name)
@@ -61,13 +63,95 @@ namespace LinkClanBot3.Discord
 			Client.Dispose();
 		}
 
+        private MemberRole GetRole(IReadOnlyCollection<ulong> roleIds)
+        {
+            var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
+            if (LoginRoleItem == null) return MemberRole.Withdrawal;            
+            
+            foreach (var role_item in roleIds)
+            {
+                foreach (var role in LoginRoleItem.AdminRole)
+                {
+                    if (role_item == Convert.ToUInt64(role))
+                    {
+                        return MemberRole.Admin;
+                    }
+                }
 
-		private MemberRole? GetRole(ulong DiscordId)
+                foreach (var role in LoginRoleItem.MemberRole)
+                {
+                    if (role_item == Convert.ToUInt64(role))
+                    {
+                        return MemberRole.Member;
+                    }
+                }
+
+                foreach (var role in LoginRoleItem.TemporaryMemberRole)
+                {
+                    if (role_item == Convert.ToUInt64(role))
+                    {
+                        return MemberRole.TemporaryMember;
+                    }
+                }
+            }
+            return MemberRole.Withdrawal;
+        }
+
+        private MemberRole GetRole(ulong DiscordId)
 		{
 			var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
-			if (LoginRoleItem == null) return null;
+			if (LoginRoleItem == null) return MemberRole.Withdrawal;
+			var guild = Client.Guilds.FirstOrDefault(e => {
+				if (e.Users.FirstOrDefault(e=>e.Id == DiscordId) != null) {
+					return true;
+				} 
+				return false;
+			});
+			if( guild == null)
+			{
+				Logger.LogWarning($"Guild not found for DiscordId: {DiscordId}");
+				return MemberRole.Withdrawal;
+			}
+			var user = guild.GetUser(DiscordId);
+			if (user == null)
+			{
+				Logger.LogWarning($"User not found for DiscordId: {DiscordId}");
+				return MemberRole.Withdrawal;
+			}
+			foreach (var role_item in user.Roles)
+			{
+				foreach (var role in LoginRoleItem.AdminRole)
+				{
+					if (role_item.Id == Convert.ToUInt64(role))
+					{
+						return MemberRole.Admin;
+					}
+				}
 
-			foreach (var role_item in Client.GetGuild(Convert.ToUInt64(getConfig<string>("Guild") ?? "")).GetUser(DiscordId).Roles)
+				foreach (var role in LoginRoleItem.MemberRole)
+				{
+					if (role_item.Id == Convert.ToUInt64(role))
+					{
+						return MemberRole.Member;
+					}
+				}
+
+				foreach (var role in LoginRoleItem.TemporaryMemberRole)
+				{
+					if (role_item.Id == Convert.ToUInt64(role))
+					{
+						return MemberRole.TemporaryMember;
+					}
+				}
+			}
+			return MemberRole.Withdrawal;
+		}
+
+		private MemberRole GetRole(IReadOnlyCollection<SocketRole> roles)
+		{
+			var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
+			if (LoginRoleItem == null) return MemberRole.Withdrawal;
+			foreach (var role_item in roles)
 			{
 				foreach (var role in LoginRoleItem.AdminRole)
 				{
@@ -98,13 +182,13 @@ namespace LinkClanBot3.Discord
 
 		private void SendMessage(string message)
 		{
-            var MessageChannelId = getConfig<string>("MessageChannel");
-            var test = Client.GetChannel(Convert.ToUInt64(MessageChannelId));
-            if (test is SocketTextChannel channel)
-            {
-                channel.SendMessageAsync(message);
-            }
-        }
+			var MessageChannelId = getConfig<string>("MessageChannel");
+			var test = Client.GetChannel(Convert.ToUInt64(MessageChannelId));
+			if (test is SocketTextChannel channel)
+			{
+				channel.SendMessageAsync(message);
+			}
+		}
 
 		/// <summary>
 		/// 起動時処理
@@ -122,23 +206,30 @@ namespace LinkClanBot3.Discord
 			Client.UserVoiceStateUpdated += UserVoiceStateUpdated;
 			Client.GuildMemberUpdated += OnGuildMemberUpdated;
 
-            Client.Disconnected += (ex) =>
-            {
-                SendMessage("接続を切ります！ありがとうございました！");
-                return Task.CompletedTask;
-            };
+			Client.Disconnected += (ex) =>
+			{
+				SendMessage("接続を切ります！ありがとうございました！");
+				return Task.CompletedTask;
+			};
 			Client.Connected += () =>
 			{
 				Logger.LogInformation("DicordEventService Connected");
 
 				return Task.CompletedTask;
 			};
-			Client.Ready += () =>
-            {
+			Client.Ready += async () =>
+			{
 				SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
-                Console.WriteLine("Bot is Ready!");
-				
-				return Task.CompletedTask;
+				Console.WriteLine("Bot is Ready!");
+
+
+				using (var scope = _scopeFactory.CreateScope())
+				{
+					var db = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
+					await MembersUpdate(db);
+                }
+
+				return;
 			};
 
 			await Task.CompletedTask;
@@ -149,7 +240,7 @@ namespace LinkClanBot3.Discord
 			if (oldRole == newRole)
 			{
 				return null;
-            }
+			}
 			switch(newRole)
 			{
 				case MemberRole.Admin:
@@ -162,37 +253,53 @@ namespace LinkClanBot3.Discord
 					return "脱退しました。さような！また逢う日まで！";
 				default:
 					return "ロールが更新されました。";
-            }
+			}
+		}
+
+		private async Task MembersUpdate(LinkClanBot3Context db)
+		{
+			foreach (var guild in Client.Guilds)
+			{
+				var users = await guild.GetUsersAsync().FlattenAsync();
+
+                foreach (var user in users) 
+				{
+					MemberUpdate(db, user); 
+				}
+			}
+			return;
         }
 
-		private void MemberUpdate(LinkClanBot3Context db, SocketUser user, MemberRole? role)
+		private void MemberUpdate(LinkClanBot3Context db, IGuildUser user)
+		{
+			var role = GetRole(user.RoleIds);
+			MemberUpdate(db, user, role);
+        }
+
+        private void MemberUpdate(LinkClanBot3Context db, IGuildUser user, MemberRole? role)
 		{
 			var member = db.Member.FirstOrDefault(e=>e.DiscordID == user.Id.ToString());
 
-			if(role == MemberRole.Withdrawal)
+			// メンバーが存在しない場合は、追加する
+			if (member == null)
 			{
-				return;
-			}
-
-            // メンバーが存在しない場合は、追加する
-            if (member == null)
-			{
-                db.Member.Add(new Member()
-                {
-                    CallName = "",
-                    Role = role ?? MemberRole.TemporaryMember,
-                    OriginID = "",
-                    DiscordID = user.Id.ToString(),
-                    DiscordDisplayName = user.Username,
-                    DiscordName = user.GlobalName,
-                    SteamID = "",
-                    UplayID = "",
-                    BATTEL_NET_BattleTag = "",
-                    epicgamesID = "",
-                    PlayStationID = "",
-                    XboxID = "",
-                    SNS_X_UserID = ""
-                });
+				db.Member.Add(new Member()
+				{
+					CallName = "",
+					Role = role ?? MemberRole.TemporaryMember,
+					OriginID = "",
+					DiscordID = user.Id.ToString(),
+					DiscordDisplayName = user.GlobalName ?? "",
+					DiscordName = user.Username,
+					SteamID = "",
+					UplayID = "",
+					BATTEL_NET_BattleTag = "",
+					epicgamesID = "",
+					PlayStationID = "",
+					XboxID = "",
+					SNS_X_UserID = ""
+				});
+				db.SaveChanges();
 				return;
 			}
 
@@ -201,45 +308,25 @@ namespace LinkClanBot3.Discord
 			{
 				member.Role = role.Value;
 			}
-            db.Member.Update(member);
-        }
+			db.Member.Update(member);
+			db.SaveChanges();
+		}
 
-        private Task OnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> arg1, SocketGuildUser arg2)
+		private Task OnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> arg1, SocketGuildUser arg2)
 		{
-			if (!arg1.HasValue || arg1.Value.IsBot)
+			if (!arg1.HasValue)
 			{
 				return Task.CompletedTask;
-            }
-			var oldRole = MemberRole.Withdrawal;
-			var newRole = MemberRole.Withdrawal;
-            foreach (var role in arg1.Value.Roles)
-			{
-				var sysRole = GetRole(role.Id);
-				if(sysRole == null || sysRole.Value == MemberRole.Withdrawal)
-				{
-					continue;
-				}
-				oldRole = sysRole.Value;
-				break;
-            }
-            foreach (var role in arg2.Roles)
-            {
-                var sysRole = GetRole(role.Id);
-                if (sysRole == null || sysRole.Value == MemberRole.Withdrawal)
-                {
-                    continue;
-                }
-                newRole = sysRole.Value;
-                break;
-            }
+			}
+			var oldRole = GetRole(arg1.Value.Roles);
+			var newRole = GetRole(arg2.Roles);
 
-			// ロールが変わった場合は、DBに保存する
-
+			//ロールが変わった場合は、DBに保存する
 			using (var scope = _scopeFactory.CreateScope())
 			{
 				var dbContext = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
-                MemberUpdate(dbContext, arg2, newRole);
-            }
+				MemberUpdate(dbContext, arg2, newRole);
+			}
 
 			var message = SendMessageWithRoleUpdate(oldRole, newRole);
 			if (message != null)
@@ -247,17 +334,17 @@ namespace LinkClanBot3.Discord
 				SendMessage(arg2.DisplayName + "さんが、" + message);
 			}
 
-            return Task.CompletedTask;
-        }
+			return Task.CompletedTask;
+		}
 
-        private Task UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState arg2, SocketVoiceState arg3)
+		private Task UserVoiceStateUpdated(SocketUser arg1, SocketVoiceState arg2, SocketVoiceState arg3)
 		{
 			using (var scope = _scopeFactory.CreateScope())
 			{
 				var dbContext = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
 
 				var userRole = GetRole(arg1.Id);
-				if (userRole == null || userRole.Value == MemberRole.Withdrawal)
+				if (userRole == MemberRole.Withdrawal)
 				{
 					return Task.CompletedTask;
 				}
@@ -281,15 +368,14 @@ namespace LinkClanBot3.Discord
 						XboxID = "",
 						SNS_X_UserID = ""
 					}).Entity;
-
-                    dbContext.SaveChanges();
+					dbContext.SaveChanges();
 				}
 
 				// 入室
 				if (arg2.VoiceChannel == null)
 				{
 					Console.WriteLine($"入室 , {user.DiscordDisplayName}");
-                    dbContext.MemberTimeLine.Add(new MemberTimeLine
+					dbContext.MemberTimeLine.Add(new MemberTimeLine
 					{
 						MemberData = user,
 						EnteringRoom = EnteringRoom.Entry,
@@ -304,7 +390,7 @@ namespace LinkClanBot3.Discord
 				else if (arg3.VoiceChannel == null)
 				{
 					Console.WriteLine($"退出 , {user.DiscordDisplayName}");
-                    dbContext.MemberTimeLine.Add(new MemberTimeLine
+					dbContext.MemberTimeLine.Add(new MemberTimeLine
 					{
 						MemberData = user,
 						EnteringRoom = EnteringRoom.Exit,
@@ -319,7 +405,7 @@ namespace LinkClanBot3.Discord
 				else
 				{
 					Console.WriteLine($"移動 , {user.DiscordDisplayName}");
-                    dbContext.MemberTimeLine.Add(new MemberTimeLine
+					dbContext.MemberTimeLine.Add(new MemberTimeLine
 					{
 						MemberData = user,
 						EnteringRoom = EnteringRoom.Move,
@@ -330,7 +416,7 @@ namespace LinkClanBot3.Discord
 						EventDate = DateTime.Now
 					});
 				}
-                dbContext.SaveChanges();
+				dbContext.SaveChanges();
 			}
 			return Task.CompletedTask;
 		}

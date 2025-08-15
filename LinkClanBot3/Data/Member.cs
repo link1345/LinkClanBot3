@@ -6,16 +6,16 @@ using System.ComponentModel.DataAnnotations;
 namespace LinkClanBot3.Data
 {
 
-    public enum MemberRole
+    public enum MemberRole : int
     {
         // 管理者
-        Admin,
+        Admin = 0,
 		// 一般メンバー
-        Member,
+        Member = 1,
 		// 仮入隊
-        TemporaryMember,
+        TemporaryMember = 2,
         // 脱退者
-        Withdrawal
+        Withdrawal = 3
     }
 
     public class Member
