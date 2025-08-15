@@ -1,7 +1,8 @@
 ﻿@page "/fetchdata"
 @using LinkClanBot3.Data
-@inject WeatherForecastService ForecastService
 @inject LinkClanBot3Context DBContext
+@inject IDialogService DialogService
+@using LinkClanBot3;
 
 <PageTitle>Weather forecast</PageTitle>
 
@@ -15,80 +16,61 @@
 }
 else
 {
-	<table class="table">
-		<thead>
-			<tr>
-				<th>DiscordName</th>
-				<th>CallName</th>
-				<th>SNS X</th>
-				<th>Role</th>
-				<th>今月(hours)</th>
-				<th>1か月前</th>
-				<th>2か月前</th>
-				<th>3か月前</th>
-			</tr>
-		</thead>
-		<tbody>
-			@foreach (var member in members)
-			{
-				<tr>
-					<td>@member.DiscordName</td>
-					<td>@member.CallName</td>
-					<td>@member.SNS_X_UserID</td>
-					<td>@member.Role</td>
-					<td>@getJoinTime(0, member.MemberID)</td>
-					<td>@getJoinTime(1, member.MemberID)</td>
-					<td>@getJoinTime(2, member.MemberID)</td>
-					<td>@getJoinTime(3, member.MemberID)</td>
-				</tr>
-			}
-		</tbody>
-	</table>
+	<MudDataGrid Items=@members>
+		<Columns>
+			<TemplateColumn T="Member" Title="" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<MudButton OnClick="() => OpenDialogAsync(ctx.Item)">詳細</MudButton>
+				</CellTemplate>
+			</TemplateColumn>
+			<PropertyColumn Property="x => x.CallName" Title="呼び名" />
+			<PropertyColumn Property="x => x.DiscordName" Title="Discordでの名前" />
+			<PropertyColumn Property="x => x.GetRoleString()" Title="役職" />
+			<PropertyColumn Property="x => x.SNS_X_UserID" Title="Xアカウント" />
+
+			<TemplateColumn Title="今月(hours)" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="0" />
+				</CellTemplate>
+			</TemplateColumn>
+
+			<TemplateColumn Title="1か月前" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="1" />
+				</CellTemplate>
+			</TemplateColumn>
+
+			<TemplateColumn Title="2か月前" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="2" />
+				</CellTemplate>
+			</TemplateColumn>
+
+			<TemplateColumn Title="3か月前" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="3" />
+				</CellTemplate>
+			</TemplateColumn>
+		</Columns>
+	</MudDataGrid>
 }
 
 @code {
 	private List<Member> members;
 
-	private double getJoinTime(int monthsAgo, string memberId)
+	private UserVoiceTime userTime = new UserVoiceTime();
+
+	private Task OpenDialogAsync(Member member)
 	{
-		DateTime dtToday = DateTime.Today.AddMonths(monthsAgo);
-		var from = new DateTime(dtToday.Year, dtToday.Month, 1);
-		var to = new DateTime(dtToday.Year, dtToday.Month,
-			DateTime.DaysInMonth(dtToday.Year, dtToday.Month), 12, 59, 59);
+		var options = new DialogOptions { CloseOnEscapeKey = true , MaxWidth = MaxWidth.ExtraSmall};
 
-		var timeLines = DBContext.MemberTimeLine
-			.Where(e => from <= e.EventDate && to >= e.EventDate && e.MemberID == memberId)
-			.Take(10000)
-			.OrderBy(e => e.MemberData)
-			.ToList();
+		var parameter = new DialogParameters();
+		parameter.Add("MemberId", member.MemberID);
 
-		double sum = 0.0;
-		var startIndex = 0;
-		foreach (var line in timeLines.Select((value, index) => new { index, value }))
-		{
-			if(line.value.EnteringRoom == EnteringRoom.Exit)
-			{
-				var endItem = timeLines.TakeLast(timeLines.Count - startIndex).Take(line.index).FirstOrDefault(e=>e.EnteringRoom == EnteringRoom.Entry);
-				if (monthsAgo != 0 && endItem == null)
-				{
-					// 退出がなくて、月終わりの場合は、…月末時間で計算する
-					sum += (line.value.EventDate - to).TotalHours;
-				}
-				else if (monthsAgo == 0 && endItem == null)
-				{
-					// 退出がなくて、今月まだ終わっていなければ、現在進行形で、Voiceチャンネルに入っているので、計算する
-					sum += (line.value.EventDate - DateTime.UtcNow).TotalHours;
-				}
-				else if(endItem != null)
-				{
-					// 退出があれば、退出時間と入室時間の差分を計算する
-					sum += (line.value.EventDate - endItem.EventDate).TotalHours;
-					startIndex = line.index;
-				}
-			}
-		}
-		return Math.Round(sum, 2);
+		return DialogService.ShowAsync<UserDialog>("Simple Dialog", parameter, options);
 	}
+
+	
 
 	protected override async Task OnInitializedAsync()
 	{

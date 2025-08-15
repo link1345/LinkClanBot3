@@ -1,0 +1,66 @@
+﻿@using LinkClanBot3.Data
+@inject LinkClanBot3Context DBContext
+
+<MudDialog>
+    <TitleContent>
+        @member?.DiscordName
+    </TitleContent>
+    <DialogContent>
+        <MudTabs>
+            <MudTabPanel Text="プロフィール">
+                <MudItem>呼び名</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.CallName</MudText></MudItem>
+                <MudItem>役職</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.GetRoleString()</MudText></MudItem>
+                <MudItem>Xアカウント</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.SNS_X_UserID</MudText></MudItem>
+                <MudItem>OriginID</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.OriginID</MudText></MudItem>
+                <MudItem>PlayStationID</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.PlayStationID</MudText></MudItem>
+                <MudItem>SteamID</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.SteamID</MudText></MudItem>
+                <MudItem>UplayID</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.UplayID</MudText></MudItem>
+                <MudItem>XboxID</MudItem>
+                <MudItem Typo="Typo.body2"><MudText>@member?.XboxID</MudText></MudItem>
+            </MudTabPanel>
+            <MudTabPanel Text="履歴(hours)">
+                <MudGrid Spacing="3">
+                    @for(var index = 0; index < 12; index++)
+                    {
+                        var monthsAgo = index;
+                        if (monthsAgo == 0)
+                        {
+                            <MudItem xs="3"><MudText>今月</MudText></MudItem>
+                        } else
+                        {
+                            <MudItem xs="3"><MudText>@($"{monthsAgo}か月前")</MudText></MudItem>
+                        }
+                        <MudItem xs="9"><UserVoiceTime MemberId=@MemberId MonthsAgo=@monthsAgo /></MudItem>
+                    }
+                </MudGrid>
+            </MudTabPanel>
+        </MudTabs>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string MemberId { get; set; }
+
+    private Member? member;
+
+    protected override async Task OnInitializedAsync()
+    {
+        member = DBContext.Member.FirstOrDefault(e=>e.MemberID == MemberId);
+    }
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+}

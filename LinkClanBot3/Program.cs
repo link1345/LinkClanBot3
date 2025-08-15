@@ -2,8 +2,10 @@ using LinkClanBot3.Data;
 using LinkClanBot3.Discord;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
 var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") ?? throw new InvalidOperationException("Connection string 'LinkClanBot3ContextConnection' not found.");
 
 builder.Services.AddDbContext<LinkClanBot3Context>(options => options.UseSqlite(connectionString));
@@ -19,6 +21,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 
+builder.Services.AddMudServices();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -30,8 +34,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseStaticFiles();
+app.MapStaticAssets();
 
 app.UseRouting();
 

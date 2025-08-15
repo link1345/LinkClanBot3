@@ -1,13 +1,22 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.Net;
 using Discord.Rest;
 using Discord.WebSocket;
 using LinkClanBot3.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.Blazor;
+using Newtonsoft.Json;
+using NuGet.Common;
 using NuGet.Protocol;
+using System;
+using System.ComponentModel.Design;
 using System.Data;
+using System.Net;
 using System.Threading.Tasks;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace LinkClanBot3.Discord
 {
@@ -39,7 +48,6 @@ namespace LinkClanBot3.Discord
 			});
 			Logger = loggerFactory.CreateLogger<DiscordEventService>();
 
-
 			Configuration = new ConfigurationBuilder()
 			   .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
 			   .AddUserSecrets<Program>()
@@ -63,41 +71,41 @@ namespace LinkClanBot3.Discord
 			Client.Dispose();
 		}
 
-        private MemberRole GetRole(IReadOnlyCollection<ulong> roleIds)
-        {
-            var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
-            if (LoginRoleItem == null) return MemberRole.Withdrawal;            
-            
-            foreach (var role_item in roleIds)
-            {
-                foreach (var role in LoginRoleItem.AdminRole)
-                {
-                    if (role_item == Convert.ToUInt64(role))
-                    {
-                        return MemberRole.Admin;
-                    }
-                }
+		private MemberRole GetRole(IReadOnlyCollection<ulong> roleIds)
+		{
+			var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
+			if (LoginRoleItem == null) return MemberRole.Withdrawal;            
+			
+			foreach (var role_item in roleIds)
+			{
+				foreach (var role in LoginRoleItem.AdminRole)
+				{
+					if (role_item == Convert.ToUInt64(role))
+					{
+						return MemberRole.Admin;
+					}
+				}
 
-                foreach (var role in LoginRoleItem.MemberRole)
-                {
-                    if (role_item == Convert.ToUInt64(role))
-                    {
-                        return MemberRole.Member;
-                    }
-                }
+				foreach (var role in LoginRoleItem.MemberRole)
+				{
+					if (role_item == Convert.ToUInt64(role))
+					{
+						return MemberRole.Member;
+					}
+				}
 
-                foreach (var role in LoginRoleItem.TemporaryMemberRole)
-                {
-                    if (role_item == Convert.ToUInt64(role))
-                    {
-                        return MemberRole.TemporaryMember;
-                    }
-                }
-            }
-            return MemberRole.Withdrawal;
-        }
+				foreach (var role in LoginRoleItem.TemporaryMemberRole)
+				{
+					if (role_item == Convert.ToUInt64(role))
+					{
+						return MemberRole.TemporaryMember;
+					}
+				}
+			}
+			return MemberRole.Withdrawal;
+		}
 
-        private MemberRole GetRole(ulong DiscordId)
+		private MemberRole GetRole(ulong DiscordId)
 		{
 			var LoginRoleItem = getConfig<SettingVoiceChannel>("VoiceChannle");
 			if (LoginRoleItem == null) return MemberRole.Withdrawal;
@@ -190,26 +198,81 @@ namespace LinkClanBot3.Discord
 			}
 		}
 
-		/// <summary>
-		/// 起動時処理
-		/// </summary>
-		/// <param name="stoppingToken"></param>
-		/// <returns></returns>
-		protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        private async Task GlobalDelete(string commandID)
+        {
+			using (HttpClient client = new HttpClient())
+			{
+				var token = getConfig<string>("DiscordToken");
+				HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, $"https://discord.com/api/v10/applications/618379894639951872/commands/{commandID}");
+				request.Headers.Add("Authorization", $"Bot {token}");
+                HttpResponseMessage response = await client.SendAsync(request);
+				Console.WriteLine(response.Content.ReadAsStringAsync().Result);//成功すれば出力なし
+            }
+        }
+
+        private async Task GuildDelete(string commandID)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                var token = getConfig<string>("DiscordToken");
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Delete, $"https://discord.com/api/v10/applications/618379894639951872/guilds/1323098619452063885/commands/{commandID}");
+                request.Headers.Add("Authorization", $"Bot {token}");
+                HttpResponseMessage response = await client.SendAsync(request);
+                Console.WriteLine(response.Content.ReadAsStringAsync().Result);//成功すれば出力なし
+            }
+        }
+
+		private async Task CommandsReset()
+		{
+            var commands = await Client.GetGlobalApplicationCommandsAsync();
+            foreach (var command in commands)
+            {
+                await GlobalDelete(command.Id.ToString());
+            }
+            foreach (var guild in Client.Guilds)
+            {
+                var guildCommands = guild.GetApplicationCommandsAsync();
+                foreach (var command in commands)
+                {
+                    await GuildDelete(command.Id.ToString());
+                }
+
+                //await guild.BulkOverwriteApplicationCommandAsync(applicationCommandProperties.ToArray());
+            }
+            SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
+            Console.WriteLine("Bot is Ready!");
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
+                await MembersUpdate(db);
+            }
+        }
+
+
+        /// <summary>
+        /// 起動時処理
+        /// </summary>
+        /// <param name="stoppingToken"></param>
+        /// <returns></returns>
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 		{
 			Logger.LogInformation("DicordEventService Start");
 			var token = getConfig<string>("DiscordToken");
 			await Client.LoginAsync(TokenType.Bot, token);
 			await Client.StartAsync();
 
-			Client.MessageUpdated += MessageUpdated;
 			Client.UserVoiceStateUpdated += UserVoiceStateUpdated;
 			Client.GuildMemberUpdated += OnGuildMemberUpdated;
+			Client.SlashCommandExecuted += OnSlashCommandExecuted;
 
-			Client.Disconnected += (ex) =>
-			{
-				SendMessage("接続を切ります！ありがとうございました！");
-				return Task.CompletedTask;
+            Client.Disconnected += async(ex) =>
+            {
+                foreach (var guild in Client.Guilds)
+                {
+                    await guild.DeleteApplicationCommandsAsync();
+                }
+                SendMessage("接続を切ります！ありがとうございました！");
+				return;
 			};
 			Client.Connected += () =>
 			{
@@ -219,23 +282,174 @@ namespace LinkClanBot3.Discord
 			};
 			Client.Ready += async () =>
 			{
-				SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
-				Console.WriteLine("Bot is Ready!");
+                SlashCommandBuilder globalCommandHelp = new SlashCommandBuilder();
+                globalCommandHelp.WithName("help");
+                globalCommandHelp.WithDescription("Shows information about the bot.");
+
+                // Slash command with name as its parameter.
+                SlashCommandOptionBuilder slashCommandOptionName = new();
+                slashCommandOptionName.WithName("call-name");
+                slashCommandOptionName.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionName.WithDescription("呼ばれたい名前");
+                slashCommandOptionName.WithRequired(true);
+
+                SlashCommandOptionBuilder slashCommandOptionSnsX = new();
+                slashCommandOptionSnsX.WithName("sns-x");
+                slashCommandOptionSnsX.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionSnsX.WithDescription("Xアカウント(@から始まる形式で書いてください)");
+                slashCommandOptionSnsX.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionOriginID = new();
+                slashCommandOptionOriginID.WithName("origin-id");
+                slashCommandOptionOriginID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionOriginID.WithDescription("Origin ID");
+                slashCommandOptionOriginID.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionSteamID = new();
+                slashCommandOptionSteamID.WithName("steam-id");
+                slashCommandOptionSteamID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionSteamID.WithDescription("Steam ID");
+                slashCommandOptionSteamID.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionUplayID = new();
+                slashCommandOptionUplayID.WithName("uplay-id");
+                slashCommandOptionUplayID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionUplayID.WithDescription("Steam ID");
+                slashCommandOptionUplayID.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionBattleTag = new();
+                slashCommandOptionBattleTag.WithName("battle-tag");
+                slashCommandOptionBattleTag.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionBattleTag.WithDescription("BATTEL.NET BattleTag");
+                slashCommandOptionBattleTag.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionEpicgamesID = new();
+                slashCommandOptionEpicgamesID.WithName("epicgames-id");
+                slashCommandOptionEpicgamesID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionEpicgamesID.WithDescription("Epicgames ID");
+                slashCommandOptionEpicgamesID.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionPlayStationID = new();
+                slashCommandOptionPlayStationID.WithName("playstation-id");
+                slashCommandOptionPlayStationID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionPlayStationID.WithDescription("PlayStation ID");
+                slashCommandOptionPlayStationID.WithRequired(false);
+
+                SlashCommandOptionBuilder slashCommandOptionXboxID = new();
+                slashCommandOptionXboxID.WithName("xbox-id");
+                slashCommandOptionXboxID.WithType(ApplicationCommandOptionType.String);
+                slashCommandOptionXboxID.WithDescription("XBOX ID");
+                slashCommandOptionXboxID.WithRequired(false);
 
 
-				using (var scope = _scopeFactory.CreateScope())
-				{
-					var db = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
-					await MembersUpdate(db);
-                }
+                SlashCommandBuilder globalCommandEditProfile = new SlashCommandBuilder();
+                globalCommandEditProfile.WithName("edit-profile");
+                globalCommandEditProfile.WithDescription("自分のプロフィールを編集します");
+                globalCommandEditProfile.AddOptions(slashCommandOptionName);
+                globalCommandEditProfile.AddOptions(slashCommandOptionSnsX);
+                globalCommandEditProfile.AddOptions(slashCommandOptionOriginID);
+                globalCommandEditProfile.AddOptions(slashCommandOptionSteamID);
+                globalCommandEditProfile.AddOptions(slashCommandOptionUplayID);
+                globalCommandEditProfile.AddOptions(slashCommandOptionBattleTag);
+                globalCommandEditProfile.AddOptions(slashCommandOptionEpicgamesID);
+                globalCommandEditProfile.AddOptions(slashCommandOptionPlayStationID);
+                globalCommandEditProfile.AddOptions(slashCommandOptionXboxID);
 
-				return;
+				//await CommandsReset();
+                await Client.CreateGlobalApplicationCommandAsync(globalCommandHelp.Build());
+                await Client.CreateGlobalApplicationCommandAsync(globalCommandEditProfile.Build());
+
+                return;
 			};
 
 			await Task.CompletedTask;
 		}
 
-		private string? SendMessageWithRoleUpdate(MemberRole oldRole, MemberRole newRole)
+		private string NowAdress()
+		{
+            IPAddress[] lIp = Dns.GetHostAddresses(Dns.GetHostName());
+
+            // IPv4を抽出する必要がある
+            foreach (var iIp in lIp)
+            {
+                if (iIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    return iIp.ToString();
+                }
+            }
+			return "";
+        }
+
+        private async Task OnSlashCommandExecuted(SocketSlashCommand command)
+        {
+			if(command.CommandName == "help")
+			{
+                await command.RespondAsync("出欠確認君Botのヘルプです。\n" +
+					$"確認ページ : http://{NowAdress()}:8080\n" +
+					"`/edit-profile` - 家族を追加します。\n" +
+					"`/help` - ヘルプを表示します。");
+				return;
+            }
+			else if (command.CommandName == "edit-profile")
+			{
+				var profile = new Member()
+				{
+					CallName = "",
+					Role = MemberRole.TemporaryMember,
+					OriginID = "",
+					DiscordID = "",
+					DiscordDisplayName = "",
+					DiscordName = "",
+					SteamID = "",
+					UplayID = "",
+					BATTEL_NET_BattleTag = "",
+					epicgamesID = "",
+					PlayStationID = "",
+					XboxID = "",
+					SNS_X_UserID = ""
+				};
+
+                foreach (var option in command.Data.Options)
+				{
+					switch (option.Name)
+					{
+						case "call-name":
+							profile.CallName = option.Value?.ToString() ?? "";
+                            break;
+                        case "sns-x":
+							profile.SNS_X_UserID = option.Value?.ToString() ?? "";
+                            break;
+                        case "origin-id":
+							profile.OriginID = option.Value?.ToString() ?? "";
+                            break;
+                        case "steam-id":
+							profile.SteamID = option.Value?.ToString() ?? "";
+                            break;
+                        case "uplay-id":
+							profile.UplayID = option.Value?.ToString() ?? "";
+                            break;
+                        case "battle-tag":
+							profile.BATTEL_NET_BattleTag = option.Value?.ToString() ?? "";
+                            break;
+						case "epicgames-id":
+							profile.epicgamesID = option.Value?.ToString() ?? "";
+							break;
+                        case "playstation-id":
+							profile.PlayStationID = option.Value?.ToString() ?? "";
+                            break;
+                        case "xbox-id":
+							profile.XboxID = option.Value?.ToString() ?? "";
+                            break;
+                    }
+				}
+
+				MemberProfileUpdate(command.User, profile);
+
+                await command.RespondAsync($"{command.User.Username}さんのプロフィールを設定しました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral:true);
+            }
+        }
+
+        private string? SendMessageWithRoleUpdate(MemberRole oldRole, MemberRole newRole)
 		{
 			if (oldRole == newRole)
 			{
@@ -262,21 +476,50 @@ namespace LinkClanBot3.Discord
 			{
 				var users = await guild.GetUsersAsync().FlattenAsync();
 
-                foreach (var user in users) 
+				foreach (var user in users) 
 				{
 					MemberUpdate(db, user); 
 				}
 			}
 			return;
+		}
+
+        private void MemberProfileUpdate(SocketUser user, Member member)
+        {
+			using (var scope = _scopeFactory.CreateScope())
+			{
+				var dbContext = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
+				var dbMember = dbContext.Member.FirstOrDefault(e => e.DiscordID == user.Id.ToString());
+
+				// メンバーが存在しない場合は、何もしない
+				if (dbMember == null)
+				{
+					return;
+				}
+
+				dbMember.CallName = member.CallName;
+				dbMember.OriginID = member.OriginID;
+				dbMember.SteamID = member.SteamID;
+				dbMember.UplayID = member.UplayID;
+				dbMember.BATTEL_NET_BattleTag = member.BATTEL_NET_BattleTag;
+				dbMember.epicgamesID = member.epicgamesID;
+				dbMember.PlayStationID = member.PlayStationID;
+				dbMember.XboxID = member.XboxID;
+				dbMember.SNS_X_UserID = member.SNS_X_UserID;
+                // DBに保存する
+                dbContext.Member.Update(dbMember);
+                dbContext.SaveChanges();
+			}
         }
 
-		private void MemberUpdate(LinkClanBot3Context db, IGuildUser user)
+
+        private void MemberUpdate(LinkClanBot3Context db, IGuildUser user)
 		{
 			var role = GetRole(user.RoleIds);
 			MemberUpdate(db, user, role);
-        }
+		}
 
-        private void MemberUpdate(LinkClanBot3Context db, IGuildUser user, MemberRole? role)
+		private void MemberUpdate(LinkClanBot3Context db, IGuildUser user, MemberRole? role)
 		{
 			var member = db.Member.FirstOrDefault(e=>e.DiscordID == user.Id.ToString());
 
@@ -297,8 +540,9 @@ namespace LinkClanBot3.Discord
 					epicgamesID = "",
 					PlayStationID = "",
 					XboxID = "",
-					SNS_X_UserID = ""
-				});
+					SNS_X_UserID = "",
+					RoleChangedDate = DateTime.UtcNow
+                });
 				db.SaveChanges();
 				return;
 			}
@@ -307,7 +551,8 @@ namespace LinkClanBot3.Discord
 			if (role.HasValue)
 			{
 				member.Role = role.Value;
-			}
+				member.RoleChangedDate = DateTime.UtcNow;
+            }
 			db.Member.Update(member);
 			db.SaveChanges();
 		}
@@ -383,8 +628,8 @@ namespace LinkClanBot3.Discord
 						before_channel_name = null,
 						after_channel_id = arg3.VoiceChannel?.Id.ToString() ?? "",
 						after_channel_name = arg3.VoiceChannel?.Name ?? "",
-						EventDate = DateTime.Now
-					});
+						EventDate = DateTime.UtcNow
+                    });
 				}
 				// 退出
 				else if (arg3.VoiceChannel == null)
@@ -398,8 +643,8 @@ namespace LinkClanBot3.Discord
 						before_channel_name = arg2.VoiceChannel?.Name ?? "",
 						after_channel_id = null,
 						after_channel_name = null,
-						EventDate = DateTime.Now
-					});
+						EventDate = DateTime.UtcNow
+                    });
 				}
 				// 移動
 				else
@@ -413,20 +658,13 @@ namespace LinkClanBot3.Discord
 						before_channel_name = arg2.VoiceChannel?.Name ?? "",
 						after_channel_id = arg3.VoiceChannel?.Id.ToString() ?? "",
 						after_channel_name = arg3.VoiceChannel?.Name ?? "",
-						EventDate = DateTime.Now
+						EventDate = DateTime.UtcNow
 					});
 				}
 				dbContext.SaveChanges();
 			}
 			return Task.CompletedTask;
 		}
-
-		private async Task MessageUpdated(Cacheable<IMessage, ulong> before, SocketMessage after, ISocketMessageChannel channel)
-		{
-			var message = await before.GetOrDownloadAsync();
-			Console.WriteLine($"{message} -> {after}");
-		}
-
 
 	}
 }

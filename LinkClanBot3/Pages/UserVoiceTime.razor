@@ -1,0 +1,54 @@
+﻿@using LinkClanBot3.Data
+@inject LinkClanBot3Context DBContext
+@inject IDialogService DialogService
+
+<MudText>@getJoinTime()</MudText>
+
+@code {
+	[Parameter]
+	public int MonthsAgo { get; set; } = 0;
+	[Parameter]
+	[EditorRequired]
+	public string MemberId { get; set; } = "";
+
+	public double getJoinTime()
+	{
+		DateTime dtToday = DateTime.Today.AddMonths(MonthsAgo);
+		var from = new DateTime(dtToday.Year, dtToday.Month, 1);
+		var to = new DateTime(dtToday.Year, dtToday.Month,
+			DateTime.DaysInMonth(dtToday.Year, dtToday.Month), 12, 59, 59);
+
+		var timeLines = DBContext.MemberTimeLine
+			.Where(e => from <= e.EventDate && to >= e.EventDate && e.MemberID == MemberId)
+			.Take(10000)
+			.OrderBy(e => e.MemberData)
+			.ToList();
+
+		double sum = 0.0;
+		var startIndex = 0;
+		foreach (var line in timeLines.Select((value, index) => new { index, value }))
+		{
+			if (line.value.EnteringRoom == EnteringRoom.Exit)
+			{
+				var endItem = timeLines.TakeLast(timeLines.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+				if (MonthsAgo != 0 && endItem == null)
+				{
+					// 退出がなくて、月終わりの場合は、…月末時間で計算する
+					sum += (line.value.EventDate - to).TotalHours;
+				}
+				else if (MonthsAgo == 0 && endItem == null)
+				{
+					// 退出がなくて、今月まだ終わっていなければ、現在進行形で、Voiceチャンネルに入っているので、計算する
+					sum += (line.value.EventDate - DateTime.UtcNow).TotalHours;
+				}
+				else if (endItem != null)
+				{
+					// 退出があれば、退出時間と入室時間の差分を計算する
+					sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+					startIndex = line.index;
+				}
+			}
+		}
+		return Math.Round(sum, 2);
+	}
+}

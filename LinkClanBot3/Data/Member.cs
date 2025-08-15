@@ -63,6 +63,24 @@ namespace LinkClanBot3.Data
 		[MaxLength(450)]
 		public string? SNS_X_UserID { get; set; }
 
-		public virtual List<MemberTimeLine>? MemberTimeLine { get; set; }
+		public DateTime RoleChangedDate { get; set; } = DateTime.UtcNow;
+
+        public string GetRoleString()
+        {
+            switch (this.Role)
+            {
+                case MemberRole.Admin:
+                    return "幹部";
+                case MemberRole.Member:
+                    return "正隊員";
+                case MemberRole.TemporaryMember:
+                    return "仮隊員";
+                case MemberRole.Withdrawal:
+                    return "除隊";
+            }
+            return "";
+        }
+
+        public virtual List<MemberTimeLine>? MemberTimeLine { get; set; }
 	}
 }
