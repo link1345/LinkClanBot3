@@ -8,9 +8,14 @@ namespace LinkClanBot3.Data
 
     public enum MemberRole
     {
-        Leader,
+        // 管理者
+        Admin,
+		// 一般メンバー
         Member,
-        provisional,
+		// 仮入隊
+        TemporaryMember,
+        // 脱退者
+        Withdrawal
     }
 
     public class Member

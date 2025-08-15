@@ -1,14 +1,5 @@
 {
   "dependencies": {
-    "secrets1": {
-      "type": "secrets",
-      "connectionId": null
-    },
-    "sqlite1": {
-      "type": "sqlite",
-      "connectionId": "ConnectionStrings:DatabaseConnection",
-      "dynamicId": null
-    },
     "mssql1": {
       "ignored": "true",
       "type": "mssql",
@@ -18,6 +9,14 @@
       "ignored": "true",
       "type": "mssql",
       "connectionId": "ConnectionStrings:LinkClanBot3Context"
+    },
+    "sqlite1": {
+      "type": "sqlite",
+      "connectionId": "ConnectionStrings:DatabaseConnection"
+    },
+    "secrets1": {
+      "type": "secrets",
+      "connectionId": null
     }
   }
 }
