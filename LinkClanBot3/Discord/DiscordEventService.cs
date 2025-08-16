@@ -295,16 +295,20 @@ namespace LinkClanBot3.Discord
                 Logger.LogInformation("Ready init run!");
                 SlashCommandBuilder globalCommandHelp = new SlashCommandBuilder();
 				globalCommandHelp.WithName("help");
-				globalCommandHelp.WithDescription("Shows information about the bot.");
+				globalCommandHelp.WithDescription("ヘルプです。");
 
-				// Slash command with name as its parameter.
-				SlashCommandOptionBuilder slashCommandOptionName = new();
+                SlashCommandBuilder globalCommandProfileClear = new SlashCommandBuilder();
+                globalCommandProfileClear.WithName("clear-profile");
+                globalCommandProfileClear.WithDescription("プロフィールに設定した内容を全て消します");
+
+                // Slash command with name as its parameter.
+                SlashCommandOptionBuilder slashCommandOptionName = new();
 				slashCommandOptionName.WithName("call-name");
 				slashCommandOptionName.WithType(ApplicationCommandOptionType.String);
 				slashCommandOptionName.WithDescription("呼ばれたい名前");
-				slashCommandOptionName.WithRequired(true);
+                slashCommandOptionName.WithRequired(false);
 
-				SlashCommandOptionBuilder slashCommandOptionSnsX = new();
+                SlashCommandOptionBuilder slashCommandOptionSnsX = new();
 				slashCommandOptionSnsX.WithName("sns-x");
 				slashCommandOptionSnsX.WithType(ApplicationCommandOptionType.String);
 				slashCommandOptionSnsX.WithDescription("Xアカウント(@から始まる形式で書いてください)");
@@ -366,9 +370,10 @@ namespace LinkClanBot3.Discord
 				globalCommandEditProfile.AddOptions(slashCommandOptionPlayStationID);
 				globalCommandEditProfile.AddOptions(slashCommandOptionXboxID);
 
-				await CommandsReset();
+				//await CommandsReset();
 				await Client.CreateGlobalApplicationCommandAsync(globalCommandHelp.Build());
-				await Client.CreateGlobalApplicationCommandAsync(globalCommandEditProfile.Build());
+                await Client.CreateGlobalApplicationCommandAsync(globalCommandProfileClear.Build());
+                await Client.CreateGlobalApplicationCommandAsync(globalCommandEditProfile.Build());
 
 				SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
 				Logger.LogInformation("Bot is Ready!");
@@ -400,70 +405,74 @@ namespace LinkClanBot3.Discord
 
 		private async Task OnSlashCommandExecuted(SocketSlashCommand command)
 		{
-			if(command.CommandName == "help")
+			switch (command.CommandName)
 			{
-				await command.RespondAsync("出欠確認君Botのヘルプです。\n" +
-					$"確認ページ : http://{NowAdress()}:8080\n" +
-					"`/edit-profile` - プロフィールを変更します。\n" +
-					"`/help` - ヘルプを表示します。",ephemeral:true);
-				return;
-			}
-			else if (command.CommandName == "edit-profile")
-			{
-				var profile = new Member()
-				{
-					CallName = "",
-					Role = MemberRole.TemporaryMember,
-					OriginID = "",
-					DiscordID = "",
-					DiscordDisplayName = "",
-					DiscordName = "",
-					SteamID = "",
-					UplayID = "",
-					BATTEL_NET_BattleTag = "",
-					epicgamesID = "",
-					PlayStationID = "",
-					XboxID = "",
-					SNS_X_UserID = ""
-				};
-
-				foreach (var option in command.Data.Options)
-				{
-					switch (option.Name)
+				case "help":					
+					await command.RespondAsync("出欠確認君Botのヘルプです。\n" +
+						$"確認ページ : http://{NowAdress()}:8080\n" +
+						"`/edit-profile` - プロフィールを変更します。\n" +
+						"`/help` - ヘルプを表示します。", ephemeral: true);
+					break;		
+				case "clear-profile":
+					MemberProfileClear(command.User);
+					await command.RespondAsync($"{command.User.GlobalName}さんのプロフィールをリセットしました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral: true);
+                    break;
+                case "edit-profile": 
+					var profile = new Member()
 					{
-						case "call-name":
-							profile.CallName = option.Value?.ToString() ?? "";
-							break;
-						case "sns-x":
-							profile.SNS_X_UserID = option.Value?.ToString() ?? "";
-							break;
-						case "origin-id":
-							profile.OriginID = option.Value?.ToString() ?? "";
-							break;
-						case "steam-id":
-							profile.SteamID = option.Value?.ToString() ?? "";
-							break;
-						case "uplay-id":
-							profile.UplayID = option.Value?.ToString() ?? "";
-							break;
-						case "battle-tag":
-							profile.BATTEL_NET_BattleTag = option.Value?.ToString() ?? "";
-							break;
-						case "epicgames-id":
-							profile.epicgamesID = option.Value?.ToString() ?? "";
-							break;
-						case "playstation-id":
-							profile.PlayStationID = option.Value?.ToString() ?? "";
-							break;
-						case "xbox-id":
-							profile.XboxID = option.Value?.ToString() ?? "";
-							break;
+						CallName = null,
+                        Role = MemberRole.TemporaryMember,
+						OriginID = null,
+						DiscordID = "",
+						DiscordDisplayName = "",
+						DiscordName = "",
+						SteamID = null,
+                        UplayID = null,
+                        BATTEL_NET_BattleTag = null,
+                        epicgamesID = null,
+                        PlayStationID = null,
+                        XboxID = null,
+                        SNS_X_UserID = null,
+                    };
+
+					foreach (var option in command.Data.Options)
+					{
+						switch (option.Name)
+						{
+							case "call-name":
+								profile.CallName = option.Value?.ToString() ?? null;
+                                break;
+							case "sns-x":
+								profile.SNS_X_UserID = option.Value?.ToString() ?? null;
+                                break;
+							case "origin-id":
+								profile.OriginID = option.Value?.ToString() ?? null;
+								break;
+							case "steam-id":
+								profile.SteamID = option.Value?.ToString() ?? null;
+                                break;
+							case "uplay-id":
+								profile.UplayID = option.Value?.ToString() ?? null;
+                                break;
+							case "battle-tag":
+								profile.BATTEL_NET_BattleTag = option.Value?.ToString() ?? null;
+                                break;
+							case "epicgames-id":
+								profile.epicgamesID = option.Value?.ToString() ?? null;
+                                break;
+							case "playstation-id":
+								profile.PlayStationID = option.Value?.ToString() ?? null;
+                                break;
+							case "xbox-id":
+								profile.XboxID = option.Value?.ToString() ?? null;
+                                break;
+						}
 					}
-				}
 
-				MemberProfileUpdate(command.User, profile);
+					MemberProfileUpdate(command.User, profile);
 
-				await command.RespondAsync($"{command.User.GlobalName}さんのプロフィールを設定しました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral:true);
+					await command.RespondAsync($"{command.User.GlobalName}さんのプロフィールを設定しました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral:true);
+					break;
 			}
 		}
 
@@ -504,7 +513,35 @@ namespace LinkClanBot3.Discord
 			return;
 		}
 
-		private void MemberProfileUpdate(SocketUser user, Member member)
+        private void MemberProfileClear(SocketUser user)
+        {
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
+                var dbMember = dbContext.Member.FirstOrDefault(e => e.DiscordID == user.Id.ToString());
+
+                // メンバーが存在しない場合は、何もしない
+                if (dbMember == null)
+                {
+                    return;
+                }
+
+                dbMember.CallName = null;
+                dbMember.OriginID = null;
+                dbMember.SteamID = null;
+                dbMember.UplayID = null;
+                dbMember.BATTEL_NET_BattleTag = null;
+                dbMember.epicgamesID = null;
+                dbMember.PlayStationID = null;
+                dbMember.XboxID = null;
+                dbMember.SNS_X_UserID = null;
+                // DBに保存する
+                dbContext.Member.Update(dbMember);
+                dbContext.SaveChanges();
+            }
+        }
+
+        private void MemberProfileUpdate(SocketUser user, Member member)
 		{
 			using (var scope = _scopeFactory.CreateScope())
 			{
@@ -517,15 +554,15 @@ namespace LinkClanBot3.Discord
 					return;
 				}
 
-				dbMember.CallName = member.CallName;
-				dbMember.OriginID = member.OriginID;
-				dbMember.SteamID = member.SteamID;
-				dbMember.UplayID = member.UplayID;
-				dbMember.BATTEL_NET_BattleTag = member.BATTEL_NET_BattleTag;
-				dbMember.epicgamesID = member.epicgamesID;
-				dbMember.PlayStationID = member.PlayStationID;
-				dbMember.XboxID = member.XboxID;
-				dbMember.SNS_X_UserID = member.SNS_X_UserID;
+				dbMember.CallName = member.CallName ?? dbMember.CallName;
+				dbMember.OriginID = member.OriginID ?? dbMember.OriginID;
+				dbMember.SteamID = member.SteamID ?? dbMember.SteamID;
+				dbMember.UplayID = member.UplayID ?? dbMember.UplayID;
+				dbMember.BATTEL_NET_BattleTag = member.BATTEL_NET_BattleTag ?? dbMember.BATTEL_NET_BattleTag;
+				dbMember.epicgamesID = member.epicgamesID ?? dbMember.epicgamesID;
+				dbMember.PlayStationID = member.PlayStationID ?? dbMember.PlayStationID;
+				dbMember.XboxID = member.XboxID ?? dbMember.XboxID;
+				dbMember.SNS_X_UserID = member.SNS_X_UserID ?? dbMember.SNS_X_UserID;
 				// DBに保存する
 				dbContext.Member.Update(dbMember);
 				dbContext.SaveChanges();
