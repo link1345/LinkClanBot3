@@ -10,12 +10,14 @@ namespace LinkClanBot3.Data
     {
         // 管理者
         Admin = 0,
-		// 一般メンバー
-        Member = 1,
+		// 幹部
+        Leader = 1,
+        // 一般メンバー
+        Member = 2,
 		// 仮入隊
-        TemporaryMember = 2,
+        TemporaryMember = 3,
         // 脱退者
-        Withdrawal = 3
+        Withdrawal = 4
     }
 
     public class Member
@@ -70,7 +72,9 @@ namespace LinkClanBot3.Data
             switch (this.Role)
             {
                 case MemberRole.Admin:
-                    return "幹部";
+                    return "代表";
+				case MemberRole.Leader:
+					return "幹部";
                 case MemberRole.Member:
                     return "正隊員";
                 case MemberRole.TemporaryMember:

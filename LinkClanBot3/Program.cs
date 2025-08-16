@@ -16,10 +16,11 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 
 builder.Services.AddHostedService<DiscordEventService>();
 
-
 builder.Services.AddRazorPages();
+
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+
+builder.Services.AddControllers();
 
 builder.Services.AddMudServices();
 
@@ -40,6 +41,8 @@ app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+app.MapControllers();
 
 // web start up
 app.Run();
