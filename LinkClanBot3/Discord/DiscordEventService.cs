@@ -52,13 +52,6 @@ namespace LinkClanBot3.Discord
 			   .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
 			   .AddUserSecrets<Program>()
 			   .Build();
-
-
-			var _config = new DiscordSocketConfig { 
-				MessageCacheSize = 100,
-			};
-			_config.GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates;
-			Client = new DiscordSocketClient(_config);
 		}
 
 		private T? getConfig<T>(string name)
@@ -256,10 +249,14 @@ namespace LinkClanBot3.Discord
 		{
 			Logger.LogInformation("DicordEventService Start");
 			var token = getConfig<string>("DiscordToken");
-			await Client.LoginAsync(TokenType.Bot, token);
-			await Client.StartAsync();
 
-			Client.UserVoiceStateUpdated += UserVoiceStateUpdated;
+            var _config = new DiscordSocketConfig
+            {
+                MessageCacheSize = 100,
+            };
+            _config.GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates;
+            Client = new DiscordSocketClient(_config);
+            Client.UserVoiceStateUpdated += UserVoiceStateUpdated;
 			Client.GuildMemberUpdated += OnGuildMemberUpdated;
 			Client.SlashCommandExecuted += OnSlashCommandExecuted;
 
@@ -362,7 +359,10 @@ namespace LinkClanBot3.Discord
                 return;
 			};
 
-			await Task.CompletedTask;
+            await Client.LoginAsync(TokenType.Bot, token);
+            await Client.StartAsync();
+
+            await Task.CompletedTask;
 		}
 
 		private string NowAdress()
