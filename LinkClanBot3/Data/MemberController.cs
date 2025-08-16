@@ -9,13 +9,13 @@ namespace LinkClanBot3.Data
 {
 	public class ViewMember
 	{
-		public string DiscordName { get; set; } = "";
+		public string 名前 { get; set; } = "";
 
-		public string Role { get; set; } = "";
+		public string 役職 { get; set; } = "";
 
 		public string OriginID { get; set; } = "";
 
-		public string Xaccount { get; set; } = "";
+		public string Xアカウント { get; set; } = "";
 	}
 
 	[ApiController]
@@ -61,10 +61,10 @@ namespace LinkClanBot3.Data
 				.OrderBy(e=>(int)e.Role)
 				.ToList()
 				.Select(e=>new ViewMember() {
-					DiscordName = e.DiscordName,
-					Role = getRoleString(e.Role),
+					名前 = e.DiscordName,
+					役職 = getRoleString(e.Role),
 					OriginID = e.OriginID ?? "",
-					Xaccount = e.SNS_X_UserID ?? ""
+					Xアカウント = e.SNS_X_UserID ?? ""
 				}).ToList();
 		}        
 	}
