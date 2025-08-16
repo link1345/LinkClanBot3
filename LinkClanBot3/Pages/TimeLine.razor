@@ -110,11 +110,11 @@ else
 			{
 				if (line.value.EnteringRoom == EnteringRoom.Exit)
 				{
-					var endItem = weekLine.value.TakeLast(weekLine.value.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
-					if (endItem != null)
+					var startItem = weekLine.value.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (startItem != null)
 					{
 						// 退出があれば、退出時間と入室時間の差分を計算する
-						sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+						sum += (line.value.EventDate - startItem.EventDate).TotalHours;
 						startIndex = line.index;
 					}
 				}
@@ -170,11 +170,11 @@ else
 			{
 				if (line.value.EnteringRoom == EnteringRoom.Exit)
 				{
-					var endItem = weekLine.value.TakeLast(weekLine.value.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
-					if (endItem != null)
+					var startItem = weekLine.value.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (startItem != null)
 					{
 						// 退出があれば、退出時間と入室時間の差分を計算する
-						sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+						sum += (line.value.EventDate - startItem.EventDate).TotalHours;
 						startIndex = line.index;
 					}
 				}

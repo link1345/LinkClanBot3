@@ -30,7 +30,7 @@
 		{
 			if (line.value.EnteringRoom == EnteringRoom.Exit)
 			{
-				var startItem = timeLines.TakeLast(timeLines.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+				var startItem = timeLines.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
 				if (startItem != null)
 				{
 					// 退出があれば、退出時間と入室時間の差分を計算する
