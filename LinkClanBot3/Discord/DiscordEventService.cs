@@ -239,8 +239,6 @@ namespace LinkClanBot3.Discord
 
                 //await guild.BulkOverwriteApplicationCommandAsync(applicationCommandProperties.ToArray());
             }
-            SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
-            Console.WriteLine("Bot is Ready!");
             using (var scope = _scopeFactory.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
@@ -355,10 +353,12 @@ namespace LinkClanBot3.Discord
                 globalCommandEditProfile.AddOptions(slashCommandOptionPlayStationID);
                 globalCommandEditProfile.AddOptions(slashCommandOptionXboxID);
 
-				await CommandsReset();
+				//await CommandsReset();
                 await Client.CreateGlobalApplicationCommandAsync(globalCommandHelp.Build());
                 await Client.CreateGlobalApplicationCommandAsync(globalCommandEditProfile.Build());
 
+                SendMessage("出欠確認君Botの準備が出来ました！こんにちは！");
+                Console.WriteLine("Bot is Ready!");
                 return;
 			};
 
