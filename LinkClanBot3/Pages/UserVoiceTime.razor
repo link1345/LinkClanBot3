@@ -11,7 +11,7 @@
 	[EditorRequired]
 	public string MemberId { get; set; } = "";
 
-	public double getJoinTime()
+	private double getJoinTime()
 	{
 		DateTime dtToday = DateTime.Today.AddMonths(MonthsAgo);
 		var from = new DateTime(dtToday.Year, dtToday.Month, 1);

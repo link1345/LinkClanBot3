@@ -6,7 +6,7 @@ using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") ?? throw new InvalidOperationException("Connection string 'LinkClanBot3ContextConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DatabaseConnection") ?? throw new InvalidOperationException("Connection string 'DatabaseConnection' not found.");
 
 builder.Services.AddDbContext<LinkClanBot3Context>(options => options.UseSqlite(connectionString));
 

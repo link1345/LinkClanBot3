@@ -7,11 +7,13 @@
 @using System.Linq
 @using MudBlazor.Services;
 
-<PageTitle>Weather forecast</PageTitle>
+<PageTitle>ボイチャログ</PageTitle>
 
-<h1>Weather forecast</h1>
+<h1>ボイチャログ</h1>
 
-<p>This component demonstrates fetching data from a service.</p>
+<h2>直近参加記録(直近10件)</h2>
+
+<p>直近10件のボイスチャット参加記録です。</p>
 
 @if (TimeLines == null)
 {
@@ -22,11 +24,11 @@ else
 	<table class="table">
 		<thead>
 			<tr>
-				<th>Date</th>
-				<th>UserName</th>
-				<th>BeforChannel</th>
-				<th>AffterChannel</th>
-				<th>Mode</th>
+				<th>日時</th>
+				<th>表示名</th>
+				<th>移動前</th>
+				<th>移動後</th>
+				<th>状態</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -34,7 +36,7 @@ else
 			{
 				<tr>
 					<td>@item.EventDate.ToShortDateString() @item.EventDate.ToLongTimeString()</td>
-					<td>@item.MemberData.DiscordDisplayName</td>
+					<td>@item.MemberData.DiscordName</td>
 					<td>@item.before_channel_name</td>
 					<td>@item.after_channel_name</td>
 					<td>@item.EnteringRoom</td>
@@ -44,16 +46,150 @@ else
 	</table>
 }
 
-@code {
-	//private WeatherForecast[]? forecasts;
 
+<h2>曜日別の参加時間</h2>
+
+<MudPaper Class="doc-section-component-container  d-flex flex-grow-1 flex-wrap justify-center align-center">
+	<MudChart
+		ChartType="ChartType.Bar" ChartSeries="@getJoinTimeWithWeeks(12)" 
+		@bind-SelectedIndex="_weekTimeLineIndex" XAxisLabels="@getWeeks()" 
+		Height="350px" Width="600px"
+		AxisChartOptions="_weekTimeLineAxisChartOptions">
+	</MudChart>
+</MudPaper>
+
+<h2>時間別の参加時間</h2>
+
+<MudPaper Class="doc-section-component-container  d-flex flex-grow-1 flex-wrap justify-center align-center">
+	<MudChart ChartType="ChartType.Bar" ChartSeries="@getJoinTimeWithHour(12)"
+			  @bind-SelectedIndex="_hourTimeLineIndex" XAxisLabels="@getHours()"
+			  Height="350px" Width="600px"
+			  AxisChartOptions="_hourTimeLineAxisChartOptions" ChartOptions="_hourChartOptions">
+	</MudChart>
+</MudPaper>
+
+
+
+
+@code {
 	private List<MemberTimeLine>? TimeLines;
 
 	protected override async Task OnInitializedAsync()
 	{
-		TimeLines = DBContext.MemberTimeLine.Where(e => true).OrderByDescending(e=>e.EventDate).Take(5).Include(e => e.MemberData).ToList();
-
-		
-
+		TimeLines = DBContext.MemberTimeLine.Where(e => true).OrderByDescending(e=>e.EventDate).Take(10).Include(e => e.MemberData).ToList();
 	}
+
+	private int _weekTimeLineIndex = -1;
+	private AxisChartOptions _weekTimeLineAxisChartOptions = new AxisChartOptions();
+
+	public string[] getWeeks()
+	{
+		return new string[] { "日", "月", "火", "水", "木", "金", "土" };
+	}
+
+	public List<ChartSeries> getJoinTimeWithWeeks(int totalWeeks)
+	{
+		List<List<MemberTimeLine>> weekTimeLines = new();
+		for (int i = 0; i < 7; i++)
+		{
+			weekTimeLines.Add(
+				DBContext.MemberTimeLine
+				.Where(e => (int)e.EventDate.DayOfWeek == i && e.EventDate > DateTime.UtcNow.AddDays(-7 * totalWeeks))
+				.Take(10000)
+				.OrderBy(e => e.MemberData)
+				.ToList()
+			);
+		}
+
+		List<double> weeks = new();
+		List<ChartSeries> weekIndices = new();
+		foreach (var weekLine in weekTimeLines.Select((value, index) => new { index, value }))
+		{
+			double sum = 0.0;
+			var startIndex = 0;
+			foreach (var line in weekLine.value.Select((value, index) => new { index, value }))
+			{
+				if (line.value.EnteringRoom == EnteringRoom.Exit)
+				{
+					var endItem = weekLine.value.TakeLast(weekLine.value.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (endItem != null)
+					{
+						// 退出があれば、退出時間と入室時間の差分を計算する
+						sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+						startIndex = line.index;
+					}
+				}
+			}
+			weeks.Add(Math.Round(sum, 2));
+		}
+
+		weekIndices.Add(new ChartSeries
+		{
+			Name = $"一週間({totalWeeks}日間)",
+			Data = weeks.ToArray(),
+		});
+
+		return weekIndices;
+	}
+
+
+	private int _hourTimeLineIndex = -1;
+	private AxisChartOptions _hourTimeLineAxisChartOptions = new AxisChartOptions();
+
+	private ChartOptions _hourChartOptions = new ChartOptions
+	{
+		MaxNumYAxisTicks = 5,
+		YAxisTicks = 1,
+	};
+
+	public string[] getHours()
+	{
+		return Enumerable.Range(0, 24).Select(i => $"{i}h").ToArray();
+	}
+
+	public List<ChartSeries> getJoinTimeWithHour(int totalWeeks)
+	{
+		List<List<MemberTimeLine>> hourTimeLines = new();
+		for (int i = 0; i < 24; i++)
+		{
+			hourTimeLines.Add(
+				DBContext.MemberTimeLine
+				.Where(e => (int)e.EventDate.Hour == i && e.EventDate > DateTime.UtcNow.AddDays(-7 * totalWeeks))
+				.Take(10000)
+				.OrderBy(e => e.MemberData)
+				.ToList()
+			);
+		}
+
+		List<double> hours = new();
+		List<ChartSeries> weekIndices = new();
+		foreach (var weekLine in hourTimeLines.Select((value, index) => new { index, value }))
+		{
+			double sum = 0.0;
+			var startIndex = 0;
+			foreach (var line in weekLine.value.Select((value, index) => new { index, value }))
+			{
+				if (line.value.EnteringRoom == EnteringRoom.Exit)
+				{
+					var endItem = weekLine.value.TakeLast(weekLine.value.Count - startIndex).Take(line.index).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (endItem != null)
+					{
+						// 退出があれば、退出時間と入室時間の差分を計算する
+						sum += (line.value.EventDate - endItem.EventDate).TotalHours;
+						startIndex = line.index;
+					}
+				}
+			}
+			hours.Add(Math.Round(sum, 2));
+		}
+
+		weekIndices.Add(new ChartSeries
+		{
+			Name = $"{totalWeeks}日間",
+			Data = hours.ToArray(),
+		});
+
+		return weekIndices;
+	}
+
 }

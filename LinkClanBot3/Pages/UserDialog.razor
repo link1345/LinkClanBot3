@@ -1,45 +1,55 @@
 ﻿@using LinkClanBot3.Data
 @inject LinkClanBot3Context DBContext
 
+@if (member == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
 <MudDialog>
     <TitleContent>
         @member?.DiscordName
     </TitleContent>
-    <DialogContent>
+    <DialogContent >
         <MudTabs>
             <MudTabPanel Text="プロフィール">
-                <MudItem>呼び名</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.CallName</MudText></MudItem>
-                <MudItem>役職</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.GetRoleString()</MudText></MudItem>
-                <MudItem>Xアカウント</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.SNS_X_UserID</MudText></MudItem>
-                <MudItem>OriginID</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.OriginID</MudText></MudItem>
-                <MudItem>PlayStationID</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.PlayStationID</MudText></MudItem>
-                <MudItem>SteamID</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.SteamID</MudText></MudItem>
-                <MudItem>UplayID</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.UplayID</MudText></MudItem>
-                <MudItem>XboxID</MudItem>
-                <MudItem Typo="Typo.body2"><MudText>@member?.XboxID</MudText></MudItem>
+                <MudStack Class="my-5">
+                    <MudItem Style="font-weight:bold"> 呼び名</MudItem>
+                    <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.CallName)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">役職</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.GetRoleString())</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">Xアカウント</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.SNS_X_UserID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">OriginID</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.OriginID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">PlayStationID</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.PlayStationID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">SteamID</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.SteamID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">UplayID</MudItem>
+                        <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.UplayID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">XboxID</MudItem>
+                            <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.XboxID)</MudText></MudItem>
+                </MudStack>
             </MudTabPanel>
             <MudTabPanel Text="履歴(hours)">
-                <MudGrid Spacing="3">
-                    @for(var index = 0; index < 12; index++)
-                    {
-                        var monthsAgo = index;
-                        if (monthsAgo == 0)
+                <MudStack Class="my-5">
+                    <MudGrid Spacing="3">
+                        @for(var index = 0; index < 12; index++)
                         {
-                            <MudItem xs="3"><MudText>今月</MudText></MudItem>
-                        } else
-                        {
-                            <MudItem xs="3"><MudText>@($"{monthsAgo}か月前")</MudText></MudItem>
+                            var monthsAgo = index;
+                            if (monthsAgo == 0)
+                            {
+                                <MudItem xs="3"><MudText>今月</MudText></MudItem>
+                            } else
+                            {
+                                <MudItem xs="3"><MudText>@($"{monthsAgo}か月前")</MudText></MudItem>
+                            }
+                            <MudItem xs="9"><UserVoiceTime MemberId=@MemberId MonthsAgo=@monthsAgo /></MudItem>
                         }
-                        <MudItem xs="9"><UserVoiceTime MemberId=@MemberId MonthsAgo=@monthsAgo /></MudItem>
-                    }
-                </MudGrid>
+                    </MudGrid>
+                </MudStack>
             </MudTabPanel>
         </MudTabs>
     </DialogContent>
@@ -47,6 +57,7 @@
         <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
     </DialogActions>
 </MudDialog>
+}
 
 @code {
     [CascadingParameter]
@@ -56,6 +67,15 @@
     public string MemberId { get; set; }
 
     private Member? member;
+
+    private string NullTextConvert(string? text)
+    {
+        if(text == null | text == "")
+        {
+            return "未設定";
+        }
+        return text;
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -355,7 +355,7 @@ namespace LinkClanBot3.Discord
                 globalCommandEditProfile.AddOptions(slashCommandOptionPlayStationID);
                 globalCommandEditProfile.AddOptions(slashCommandOptionXboxID);
 
-				//await CommandsReset();
+				await CommandsReset();
                 await Client.CreateGlobalApplicationCommandAsync(globalCommandHelp.Build());
                 await Client.CreateGlobalApplicationCommandAsync(globalCommandEditProfile.Build());
 
@@ -386,8 +386,8 @@ namespace LinkClanBot3.Discord
 			{
                 await command.RespondAsync("出欠確認君Botのヘルプです。\n" +
 					$"確認ページ : http://{NowAdress()}:8080\n" +
-					"`/edit-profile` - 家族を追加します。\n" +
-					"`/help` - ヘルプを表示します。");
+					"`/edit-profile` - プロフィールを変更します。\n" +
+					"`/help` - ヘルプを表示します。",ephemeral:true);
 				return;
             }
 			else if (command.CommandName == "edit-profile")
@@ -445,7 +445,7 @@ namespace LinkClanBot3.Discord
 
 				MemberProfileUpdate(command.User, profile);
 
-                await command.RespondAsync($"{command.User.Username}さんのプロフィールを設定しました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral:true);
+                await command.RespondAsync($"{command.User.GlobalName}さんのプロフィールを設定しました！\n http://{NowAdress()}:8080 で確認できます。", ephemeral:true);
             }
         }
 
