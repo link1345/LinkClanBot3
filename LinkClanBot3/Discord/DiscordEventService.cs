@@ -114,7 +114,11 @@ namespace LinkClanBot3.Discord
 				Logger.LogWarning($"User not found for DiscordId: {DiscordId}");
 				return MemberRole.Withdrawal;
 			}
-			foreach (var role_item in user.Roles)
+			if (user.IsBot)
+			{
+                return MemberRole.Withdrawal;
+            }
+            foreach (var role_item in user.Roles)
 			{
 				foreach (var role in LoginRoleItem.AdminRole)
 				{
