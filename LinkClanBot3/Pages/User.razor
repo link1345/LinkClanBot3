@@ -30,25 +30,25 @@ else
 
 			<TemplateColumn Title="今月(hours)" Sortable="false" Filterable="false" Groupable="false">
 				<CellTemplate Context="ctx">
-					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="0" />
+					<UserVoiceTime MemberId="@(ctx.Item.MemberID)" MonthsAgo="0" />
 				</CellTemplate>
 			</TemplateColumn>
 
 			<TemplateColumn Title="1か月前" Sortable="false" Filterable="false" Groupable="false">
 				<CellTemplate Context="ctx">
-					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="1" />
+					<UserVoiceTime MemberId="@(ctx.Item.MemberID)" MonthsAgo="1" />
 				</CellTemplate>
 			</TemplateColumn>
 
 			<TemplateColumn Title="2か月前" Sortable="false" Filterable="false" Groupable="false">
 				<CellTemplate Context="ctx">
-					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="2" />
+					<UserVoiceTime MemberId="@(ctx.Item.MemberID)" MonthsAgo="2" />
 				</CellTemplate>
 			</TemplateColumn>
 
 			<TemplateColumn Title="3か月前" Sortable="false" Filterable="false" Groupable="false">
 				<CellTemplate Context="ctx">
-					<UserVoiceTime MemberId="ctx.MemberId" MonthsAgo="3" />
+					<UserVoiceTime MemberId="@(ctx.Item.MemberID)" MonthsAgo="3" />
 				</CellTemplate>
 			</TemplateColumn>
 		</Columns>
