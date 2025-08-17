@@ -20,12 +20,12 @@ else
 		<Columns>
 			<TemplateColumn T="Member" Title="" Sortable="false" Filterable="false" Groupable="false">
 				<CellTemplate Context="ctx">
-					<MudButton OnClick="() => OpenDialogAsync(ctx.Item)">詳細</MudButton>
+					<MudButton OnClick="() => OpenDialogAsync(ctx.Item)" Color="Color.Primary">詳細</MudButton>
 				</CellTemplate>
 			</TemplateColumn>
 			<PropertyColumn Property="x => x.CallName" Title="呼び名" />
 			<PropertyColumn Property="x => x.DiscordName" Title="Discordでの名前" />
-			<PropertyColumn Property="x => x.GetRoleString()" Title="役職" />
+			<PropertyColumn Property="x => x.GetRoleString()" CellClass="text-center" Title="役職" />
 			<PropertyColumn Property="x => x.SNS_X_UserID" Title="Xアカウント" />
 
 			<TemplateColumn Title="今月(hours)" Sortable="false" Filterable="false" Groupable="false">

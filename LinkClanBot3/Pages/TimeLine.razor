@@ -34,7 +34,7 @@ else
 			@foreach (var item in TimeLines)
 			{
 				<tr>
-					<td>@item.EventDate.ToShortDateString() @item.EventDate.ToLongTimeString()</td>
+					<td>@item.EventDate.ToLocalTime().ToShortDateString() @item.EventDate.ToLocalTime().ToLongTimeString()</td>
 					<td>@item.MemberData.DiscordName</td>
 					<td>@item.before_channel_name</td>
 					<td>@item.after_channel_name</td>
@@ -94,8 +94,8 @@ else
 			weekTimeLines.Add(
 				DBContext.MemberTimeLine
 				.Where(e => (int)e.EventDate.DayOfWeek == i && e.EventDate > DateTime.UtcNow.AddDays(-7 * totalWeeks))
-				.Take(10000)
 				.OrderBy(e => e.MemberData)
+				.Take(10000)
 				.ToList()
 			);
 		}
@@ -110,7 +110,7 @@ else
 			{
 				if (line.value.EnteringRoom == EnteringRoom.Exit)
 				{
-					var startItem = weekLine.value.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					var startItem = weekLine.value.Skip(startIndex).Take(line.index - startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry && line.value.MemberID == e.MemberID);
 					if (startItem != null)
 					{
 						// 退出があれば、退出時間と入室時間の差分を計算する
@@ -154,8 +154,8 @@ else
 			hourTimeLines.Add(
 				DBContext.MemberTimeLine
 				.Where(e => (int)e.EventDate.Hour == i && e.EventDate > DateTime.UtcNow.AddDays(-7 * totalWeeks))
-				.Take(10000)
 				.OrderBy(e => e.MemberData)
+				.Take(10000)
 				.ToList()
 			);
 		}
@@ -170,7 +170,7 @@ else
 			{
 				if (line.value.EnteringRoom == EnteringRoom.Exit)
 				{
-					var startItem = weekLine.value.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					var startItem = weekLine.value.Skip(startIndex).Take(line.index - startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry && line.value.MemberID == e.MemberID);
 					if (startItem != null)
 					{
 						// 退出があれば、退出時間と入室時間の差分を計算する

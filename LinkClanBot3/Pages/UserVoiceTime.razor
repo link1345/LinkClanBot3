@@ -2,7 +2,7 @@
 @inject LinkClanBot3Context DBContext
 @inject IDialogService DialogService
 
-<MudText>@getJoinTime()</MudText>
+<MudText Class="flex-column justify-content-end text-end">@getJoinTime()</MudText>
 
 @code {
 	[Parameter]
@@ -20,8 +20,8 @@
 
 		var timeLines = DBContext.MemberTimeLine
 			.Where(e => from <= e.EventDate && to >= e.EventDate && e.MemberID == MemberId)
-			.Take(10000)
 			.OrderBy(e => e.MemberData)
+			.Take(10000)
 			.ToList();
 
 		double sum = 0.0;
@@ -30,11 +30,11 @@
 		{
 			if (line.value.EnteringRoom == EnteringRoom.Exit)
 			{
-				var startItem = timeLines.Skip(startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+				var startItem = timeLines.Skip(startIndex).Take(line.index - startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
 				if (startItem != null)
 				{
 					// 退出があれば、退出時間と入室時間の差分を計算する
-					sum += Math.Max((line.value.EventDate - startItem.EventDate).TotalHours, 0);
+					sum += (line.value.EventDate - startItem.EventDate).TotalHours;
 					startIndex = line.index;
 				}
 			}
