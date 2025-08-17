@@ -6,9 +6,9 @@
 
 <PageTitle>メンバー一覧</PageTitle>
 
-<h1>メンバー一覧</h1>
+<MudText Typo="Typo.h1" Style="font-size:xx-large; font-weight:700">メンバー一覧</MudText>
 
-<p>Discordサーバーに参加しているメンバー一覧です。</p>
+<MudText Typo="Typo.body1" Style="font-size:medium;">Discordサーバーに参加しているメンバー一覧です。</MudText>
 
 @if (members == null)
 {
@@ -16,6 +16,7 @@
 }
 else
 {
+	<MudText Class="text-end">在籍：@(members.Count)名</MudText>
 	<MudDataGrid Items=@members>
 		<Columns>
 			<TemplateColumn T="Member" Title="" Sortable="false" Filterable="false" Groupable="false">
