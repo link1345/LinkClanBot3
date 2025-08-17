@@ -225,7 +225,7 @@
 			List<double> hours = new();
 			for (int i = 0; i < 24; i++)
 			{
-				var memberCount = day.value.Where(e => e.EventDate.ToLocalTime().Hour == i).DistinctBy(e => e.MemberID).Count();
+				var memberCount = day.value.Where(e => e.EventDate.ToLocalTime().Hour == i && e.EnteringRoom == EnteringRoom.Entry).DistinctBy(e => e.MemberID).Count();
 				hours.Add(memberCount);
 			}
 
