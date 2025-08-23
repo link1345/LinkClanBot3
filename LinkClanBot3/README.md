@@ -107,3 +107,9 @@ dotnet ef database update
 ```bash
 ./LinkClanBot3 
 ```
+
+## お問い合わせ先
+
+下記のDiscordサーバーにて、質問やバグ報告を受け付けています。
+
+https://discord.gg/Zy65k8AxH2
