@@ -16,7 +16,7 @@
 
 コンフィグで、`Kestrel:Endpoints:Http:Url`を変更することで、ポートやIPアドレスを変更できます。
 
-※ readmeに書いてある設定(http://0.0.0.0:8080)では、使っている端末のIPアドレスでもアクセス可能です。
+※ readmeに書いてある設定( http://0.0.0.0:8080 )では、使っている端末のIPアドレスでもアクセス可能です。
 
 
 ただし、DiscordEventServiceで説明に使っているPortを8080に固定しているため、Port変更する場合は、`DiscordEventService.cs`の`OnSlashCommandExecuted`の`8080`と記述されている部分を変更する必要があります。
@@ -81,6 +81,10 @@ cloneしたソリューションのLinkClanBot3.slnを開いて、Releaseでビ�
     * MemberRole: Botのメンバーロールを指定します。
     * TemporaryMemberRole: Botの一時メンバーロールを指定します。
 * ConnectionStrings: DatabaseConnection: SQLiteのDBファイルのパスを指定します。
+
+なお、同じロールIDを設定しても、複数のロールを設定しても問題ありません。
+
+ロール判定の優先順位は、「admin」 > 「leader」 > 「member」 > 「temporary member」の順番です。
 
 ## 環境変数設定
 
