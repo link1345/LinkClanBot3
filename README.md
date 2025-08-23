@@ -1,7 +1,5 @@
 ﻿
-## 前提環境
-
-* .NET 9.0
+# LinkClanBot3
 
 ## 概要
 
@@ -36,6 +34,10 @@
 * https://github.com/link1345/LinkClanBot3/blob/master/LinkClanBot3/Pages/Shared/_Layout.cshtml
 * https://github.com/link1345/LinkClanBot3/blob/master/LinkClanBot3/Pages/Index.razor
 * https://github.com/link1345/LinkClanBot3/blob/master/LinkClanBot3/Shared/NavMenu.razor
+
+## 前提環境
+
+* .NET 9.0
 
 ## ビルド
 
