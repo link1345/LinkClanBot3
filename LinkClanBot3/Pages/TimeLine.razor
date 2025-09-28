@@ -35,7 +35,7 @@
 				@foreach (var item in TimeLines)
 				{
 					<tr>
-						<td>@item.EventDate.ToLocalTime().ToShortDateString() @item.EventDate.ToLocalTime().ToLongTimeString()</td>
+						<td>@item.EventDate.ToLocalTime().ToString("yyyy/MM/dd HH:mm:ss")</td>
 						<td>@item.MemberData.DiscordName</td>
 						<td>@item.before_channel_name</td>
 						<td>@item.after_channel_name</td>
