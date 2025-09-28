@@ -64,13 +64,16 @@ namespace LinkClanBot3.Discord
 							var member = dbContext.Member.Include(e=>e.MemberTimeLine).FirstOrDefault(e => e.DiscordID == user.Id.ToString());
 							if (member != null)
 							{
-								var elapsedDays = member.ElapsedDays();
-								if (elapsedDays == 14)
+								var updateDate = (DateTime.UtcNow - member.RoleChangedDate).TotalDays;
+								if (updateDate == 14)
 								{
 									continue;
 								}
 
-								SendMessage($"{user.DisplayName}さん、仮入隊から{elapsedDays}日経過しました。正隊員への昇格をお忘れなく！");
+								var elapsedDays = member.ElapsedDays();
+								var totalJoinTime = member.GetTotalJoinTime();
+
+								SendMessage($"{user.DisplayName}さん、仮入隊から{updateDate}日経過しました。正隊員への昇格をお忘れなく！(最終参加:{elapsedDays}日、合計参加時間:{totalJoinTime}時間)");
 							}
 						}
 					}

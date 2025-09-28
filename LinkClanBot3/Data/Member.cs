@@ -119,6 +119,34 @@ namespace LinkClanBot3.Data
 			return days;
 		}
 
+		public double GetTotalJoinTime()
+		{
+			if (this.MemberTimeLine == null || this.MemberTimeLine.Count == 0)
+			{
+				return 0.0;
+			}
+			var timeLines = this.MemberTimeLine
+				.OrderBy(e => e.EventDate)
+				.Take(10000)
+				.ToList();
+			double sum = 0.0;
+			var startIndex = 0;
+			foreach (var line in timeLines.Select((value, index) => new { index, value }))
+			{
+				if (line.value.EnteringRoom == EnteringRoom.Exit)
+				{
+					var startItem = timeLines.Skip(startIndex).Take(line.index - startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (startItem != null)
+					{
+						// 退出があれば、退出時間と入室時間の差分を計算する
+						sum += (line.value.EventDate - startItem.EventDate).TotalHours;
+						startIndex = line.index;
+					}
+				}
+			}
+			return Math.Round(sum, 2);
+		}
+
 		/// <summary>
 		/// 今月の参加時間を返す
 		/// </summary>
