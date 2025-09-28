@@ -52,6 +52,13 @@ else
 					<UserVoiceTime MemberId="@(ctx.Item.MemberID)" MonthsAgo="3" />
 				</CellTemplate>
 			</TemplateColumn>
+
+
+			<TemplateColumn Title="最後参加から何日" Sortable="false" Filterable="false" Groupable="false">
+				<CellTemplate Context="ctx">
+					<UserElapsedDays MemberId="@(ctx.Item.MemberID)" />
+				</CellTemplate>
+			</TemplateColumn>
 		</Columns>
 	</MudDataGrid>
 }

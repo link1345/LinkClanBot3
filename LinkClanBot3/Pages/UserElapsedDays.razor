@@ -3,7 +3,7 @@
 @inject LinkClanBot3Context DBContext
 @inject IDialogService DialogService
 
-<MudText Class="flex-column text-end">@getJoinTime()</MudText>
+<MudText Class="flex-column text-end">@getElapsedDays()</MudText>
 
 @code {
 	[Parameter]
@@ -12,9 +12,10 @@
 	[EditorRequired]
 	public string MemberId { get; set; } = "";
 
-	private double getJoinTime()
+	private string getElapsedDays()
 	{
 		var member = DBContext.Member.Include(e => e.MemberTimeLine).FirstOrDefault(e => e.MemberID == MemberId);
-		return member?.GetJoinTime(MonthsAgo) ?? 0;
+		var days = member?.ElapsedDays() ?? Member.MaxDisplayDay;
+		return days < Member.MaxDisplayDay ? $"{days}日" : $"{days}日以上" ;
 	}
 }

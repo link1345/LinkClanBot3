@@ -1,7 +1,9 @@
-﻿using Discord;
+﻿using CronSTD;
+using Discord;
 using Discord.WebSocket;
 using LinkClanBot3.Data;
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 
 namespace LinkClanBot3.Discord
 {
@@ -21,6 +23,8 @@ namespace LinkClanBot3.Discord
 		private DiscordSocketClient Client { set; get; }
 		private IConfigurationRoot Configuration { set; get; }
 
+		private readonly CronDaemon TemporaryMemberAlertCron = new CronDaemon();
+
 		public DiscordEventService(IServiceScopeFactory scopeFactory)
 		{
 			_scopeFactory = scopeFactory;
@@ -39,6 +43,39 @@ namespace LinkClanBot3.Discord
 			   .AddUserSecrets<Program>()
 			   .AddJsonFile("appsettings.Production.json", optional: true, reloadOnChange: true)
                .Build();
+
+			TemporaryMemberAlertCron.AddJob("0 0 * * *", TemporaryMemberAlertTask);
+			TemporaryMemberAlertCron.Start();
+		}
+
+		private async void TemporaryMemberAlertTask()
+		{
+			foreach (var guild in Client.Guilds)
+			{
+				var users = await guild.GetUsersAsync().FlattenAsync();
+				foreach (var user in users)
+				{
+					var role = GetRole(user.RoleIds);
+					if (role == MemberRole.TemporaryMember)
+					{
+						using (var scope = _scopeFactory.CreateScope())
+						{
+							var dbContext = scope.ServiceProvider.GetRequiredService<LinkClanBot3Context>();
+							var member = dbContext.Member.Include(e=>e.MemberTimeLine).FirstOrDefault(e => e.DiscordID == user.Id.ToString());
+							if (member != null)
+							{
+								var elapsedDays = member.ElapsedDays();
+								if (elapsedDays == 14)
+								{
+									continue;
+								}
+
+								SendMessage($"{user.DisplayName}さん、仮入隊から{elapsedDays}日経過しました。正隊員への昇格をお忘れなく！");
+							}
+						}
+					}
+				}
+			}
 		}
 
 		private T? getConfig<T>(string name)
@@ -493,7 +530,7 @@ namespace LinkClanBot3.Discord
 				case MemberRole.TemporaryMember:
 					return "仮入隊になりました。ようこそ！";
 				case MemberRole.Withdrawal:
-					return "脱退しました。さような！また逢う日まで！";
+					return "脱退しました。さようなら！また逢う日まで！";
 				default:
 					return "ロールが更新されました。";
 			}

@@ -85,6 +85,81 @@ namespace LinkClanBot3.Data
             return "";
         }
 
-        public virtual List<MemberTimeLine>? MemberTimeLine { get; set; }
+
+		public static int MaxDisplayDay = 30;
+
+		/// <summary>
+		/// 最後にJoinしてからの経過日数を返す
+		/// </summary>
+		/// <returns></returns>
+		public int ElapsedDays()
+		{
+			// 1度も入室履歴がない場合は、ステータスが変更された日からの経過日数を返す
+			var lastDays = (DateTime.UtcNow - this.RoleChangedDate).Days;
+			if (this.MemberTimeLine == null || this.MemberTimeLine.Count == 0)
+			{
+				return MaxDisplayDay;
+			}
+
+			// MAXDisplayDay以上に経過している場合は、MaxDisplayDayを返す
+			var lastJoinWithMaxDays = this.MemberTimeLine.Where(e=>e.EventDate >= DateTime.UtcNow.AddDays(-MaxDisplayDay));
+			if (lastJoinWithMaxDays == null)
+			{
+				return MaxDisplayDay;
+			}
+			// 最後にJoinした履歴を取得する
+			var lastJoin = lastJoinWithMaxDays.OrderBy(e => e.EventDate).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+			if (lastJoin == null)
+			{
+				return MaxDisplayDay;
+			}
+
+			// MaxDisplayDays以上の日にちが経った場合は、MaxDisplayDaysを返す
+			var days = Math.Min((DateTime.UtcNow - lastJoin.EventDate).Days , MaxDisplayDay);
+			return days;
+		}
+
+		/// <summary>
+		/// 今月の参加時間を返す
+		/// </summary>
+		/// <param name="MonthsAgo">何か月前か</param>
+		/// <returns></returns>
+		public double GetJoinTime(int MonthsAgo)
+		{
+			DateTime dtToday = DateTime.Today.AddMonths(MonthsAgo);
+			var from = new DateTime(dtToday.Year, dtToday.Month, 1);
+			var to = new DateTime(dtToday.Year, dtToday.Month,
+				DateTime.DaysInMonth(dtToday.Year, dtToday.Month), 12, 59, 59);
+
+			if(this.MemberTimeLine == null || this.MemberTimeLine.Count == 0)
+			{
+				return 0.0;
+			}
+
+			var timeLines = this.MemberTimeLine
+				.Where(e => from <= e.EventDate && to >= e.EventDate)
+				.OrderBy(e => e.EventDate)
+				.Take(10000)
+				.ToList();
+
+			double sum = 0.0;
+			var startIndex = 0;
+			foreach (var line in timeLines.Select((value, index) => new { index, value }))
+			{
+				if (line.value.EnteringRoom == EnteringRoom.Exit)
+				{
+					var startItem = timeLines.Skip(startIndex).Take(line.index - startIndex).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+					if (startItem != null)
+					{
+						// 退出があれば、退出時間と入室時間の差分を計算する
+						sum += (line.value.EventDate - startItem.EventDate).TotalHours;
+						startIndex = line.index;
+					}
+				}
+			}
+			return Math.Round(sum, 2);
+		}
+
+		public virtual List<MemberTimeLine>? MemberTimeLine { get; set; }
 	}
 }

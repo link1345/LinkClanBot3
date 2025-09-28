@@ -31,6 +31,8 @@ else
                         <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.UplayID)</MudText></MudItem>
                     <MudItem Style="font-weight:bold">XboxID</MudItem>
                         <MudItem Typo="Typo.body2"><MudText Class="ml-5">@NullTextConvert(member?.XboxID)</MudText></MudItem>
+                    <MudItem Style="font-weight:bold">最終参加から何日経ったか？</MudItem>
+                        <MudItem Typo="Typo.body2"><UserElapsedDays MemberId=@MemberId /></MudItem>
                 </MudStack>
             </MudTabPanel>
             <MudTabPanel Text="履歴(hours)">

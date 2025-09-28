@@ -13,6 +13,7 @@ builder.Services.AddDbContext<LinkClanBot3Context>(options => options.UseSqlite(
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<LinkClanBot3Context>();
 
 // Add services to the container.
+builder.Services.AddControllers();
 
 builder.Services.AddHostedService<DiscordEventService>();
 
