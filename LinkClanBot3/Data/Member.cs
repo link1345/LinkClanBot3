@@ -108,14 +108,14 @@ namespace LinkClanBot3.Data
 				return MaxDisplayDay;
 			}
 			// 最後にJoinした履歴を取得する
-			var lastJoin = lastJoinWithMaxDays.OrderBy(e => e.EventDate).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
+			var lastJoin = lastJoinWithMaxDays.OrderByDescending(e => e.EventDate).FirstOrDefault(e => e.EnteringRoom == EnteringRoom.Entry);
 			if (lastJoin == null)
 			{
 				return MaxDisplayDay;
 			}
 
 			// MaxDisplayDays以上の日にちが経った場合は、MaxDisplayDaysを返す
-			var days = Math.Min((DateTime.UtcNow - lastJoin.EventDate).Days , MaxDisplayDay);
+			var days = Math.Min((int)(DateTime.UtcNow - lastJoin.EventDate).TotalDays , MaxDisplayDay);
 			return days;
 		}
 
