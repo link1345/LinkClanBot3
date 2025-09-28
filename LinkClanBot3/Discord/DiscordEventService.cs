@@ -73,7 +73,7 @@ namespace LinkClanBot3.Discord
 								var elapsedDays = member.ElapsedDays();
 								var totalJoinTime = member.GetTotalJoinTime();
 
-								SendMessage($"{user.DisplayName}さん、仮入隊から{updateDate}日経過しました。正隊員への昇格をお忘れなく！(最終参加:{elapsedDays}日、合計参加時間:{totalJoinTime}時間)");
+								SendMessage($"{user.DisplayName}さん、仮入隊から{updateDate}日経過しました。正隊員への昇格をお忘れなく！(最終参加:{elapsedDays}日前、合計参加時間:{totalJoinTime}時間)");
 							}
 						}
 					}
