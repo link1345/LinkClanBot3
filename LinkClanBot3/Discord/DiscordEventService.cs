@@ -317,17 +317,18 @@ namespace LinkClanBot3.Discord
 
 			Client.Disconnected += async(ex) =>
 			{
+				/*
 				foreach (var guild in Client.Guilds)
 				{
 					await guild.DeleteApplicationCommandsAsync();
 				}
-				SendMessage("接続を切ります！ありがとうございました！");
+				*/
+				//SendMessage("接続を切ります！ありがとうございました！");
 				return;
 			};
 			Client.Connected += () =>
 			{
-				Logger.LogInformation("DicordEventService Connected");
-
+				//Logger.LogInformation("DicordEventService Connected");
 				return Task.CompletedTask;
 			};
 			Client.Ready += async () =>
