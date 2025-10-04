@@ -154,12 +154,12 @@ namespace LinkClanBot3.Data
 		/// <returns></returns>
 		public double GetJoinTime(int MonthsAgo)
 		{
-			DateTime dtToday = DateTime.Today.AddMonths(MonthsAgo);
+			DateTime dtToday = DateTime.Today.AddMonths(-MonthsAgo);
 			var from = new DateTime(dtToday.Year, dtToday.Month, 1);
 			var to = new DateTime(dtToday.Year, dtToday.Month,
 				DateTime.DaysInMonth(dtToday.Year, dtToday.Month), 12, 59, 59);
 
-			if(this.MemberTimeLine == null || this.MemberTimeLine.Count == 0)
+			if (this.MemberTimeLine == null || this.MemberTimeLine.Count == 0)
 			{
 				return 0.0;
 			}
@@ -169,6 +169,14 @@ namespace LinkClanBot3.Data
 				.OrderBy(e => e.EventDate)
 				.Take(10000)
 				.ToList();
+
+			Console.WriteLine($"from={from}, to={to}");
+
+			foreach (var line in timeLines)
+			{
+				Console.WriteLine($"  {line.EventDate} {line.EnteringRoom} {line.before_channel_name} -> {line.after_channel_name}");
+			}
+
 
 			double sum = 0.0;
 			var startIndex = 0;
